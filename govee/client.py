@@ -80,7 +80,7 @@ class GoveeClient:
                     error_data = response.json()
                     if "message" in error_data:
                         error_message = error_data["message"]
-                except:
+                except (ValueError, KeyError):
                     pass
                 raise GoveeAPIError(
                     error_message,
