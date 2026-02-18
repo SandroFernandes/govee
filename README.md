@@ -9,6 +9,8 @@ Dockerized Django backend environment with current stable runtime images.
 - SQLite `3` (file-based database)
 - Gunicorn `23.x`
 - WhiteNoise `6.x` (static files in Docker)
+- React `18.x` + Vite `5.x`
+- Bun `1.x` (frontend runtime/package manager)
 
 ## Quick start
 
@@ -25,15 +27,31 @@ Dockerized Django backend environment with current stable runtime images.
 
 	- http://localhost:8000/health/
 
-3. (Optional) Create superuser:
+3. Open frontend:
+
+	- http://localhost:5173/
+
+	For production frontend image (Nginx), run:
+
+	```bash
+	docker compose --profile prod up --build
+	```
+
+	Then open:
+
+	- http://localhost:8080/
+
+4. (Optional) Create superuser:
 
 	```bash
 	docker compose exec backend python manage.py createsuperuser
 	```
 
-4. Open admin:
+5. Open admin:
 
 	- http://localhost:8000/admin/
+
+The frontend runs in a separate `frontend` service and hot-reloads from `./frontend`.
 
 ## Environment config
 
