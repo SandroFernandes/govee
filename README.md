@@ -8,6 +8,7 @@ Dockerized Django backend environment with current stable runtime images.
 - Django `5.x` (installed from `requirements.txt`)
 - SQLite `3` (file-based database)
 - Gunicorn `23.x`
+- WhiteNoise `6.x` (static files in Docker)
 
 ## Quick start
 
@@ -16,6 +17,9 @@ Dockerized Django backend environment with current stable runtime images.
 	```bash
 	docker compose up --build
 	```
+
+	This startup runs migrations and `collectstatic` automatically.
+	With `DJANGO_DEBUG=True`, backend code changes in `./backend` hot-reload automatically.
 
 2. Open health endpoint:
 
