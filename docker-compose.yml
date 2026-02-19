@@ -30,19 +30,6 @@ services:
       - backend
     restart: unless-stopped
 
-  frontend-prod:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: govee-frontend-prod
-    profiles:
-      - prod
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-
 volumes:
   sqlite_data:
   frontend_node_modules:

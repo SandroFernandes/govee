@@ -31,10 +31,10 @@ Dockerized Django backend environment with current stable runtime images.
 
 	- http://localhost:5173/
 
-	For production frontend image (Nginx), run:
+	For production stack (Gunicorn backend + Nginx frontend), run:
 
 	```bash
-	docker compose --profile prod up --build
+	docker compose -f docker-compose.prod.yml up --build
 	```
 
 	Then open:
