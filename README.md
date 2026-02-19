@@ -83,6 +83,12 @@ Run all tests (backend + frontend):
 make test
 ```
 
+Run Docker integration smoke test (frontend proxy -> backend):
+
+```bash
+make smoke
+```
+
 Run backend tests:
 
 ```bash
