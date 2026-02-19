@@ -7,6 +7,7 @@ from dataclasses import asdict
 from django.core.management.base import BaseCommand, CommandError
 
 from app.govee_ble import H5075Reading, parse_h5075_manufacturer_data
+from app.models import H5075Measurement
 
 
 class Command(BaseCommand):
@@ -27,6 +28,7 @@ class Command(BaseCommand):
             help="Print all matching H5075 readings (default prints strongest RSSI only).",
         )
         parser.add_argument("--json", action="store_true", help="Output JSON.")
+        parser.add_argument("--save", action="store_true", help="Save selected readings to the database.")
 
     def handle(self, *args, **options) -> None:
         try:
@@ -47,6 +49,23 @@ class Command(BaseCommand):
 
         readings.sort(key=lambda item: item.rssi if item.rssi is not None else -9999, reverse=True)
         selected = readings if options["all"] else readings[:1]
+
+        if options["save"]:
+            H5075Measurement.objects.bulk_create(
+                [
+                    H5075Measurement(
+                        address=item.address,
+                        name=item.name,
+                        temperature_c=item.temperature_c,
+                        humidity_pct=item.humidity_pct,
+                        battery_pct=item.battery_pct,
+                        error=item.error,
+                        rssi=item.rssi,
+                    )
+                    for item in selected
+                ]
+            )
+            self.stderr.write(f"Saved {len(selected)} reading(s)")
 
         if options["json"]:
             self.stdout.write(json.dumps([asdict(item) for item in selected], indent=2))

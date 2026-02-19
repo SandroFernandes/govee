@@ -13,6 +13,7 @@ from app.govee_ble import (
     decode_temp_humid_battery_error,
     parse_h5075_manufacturer_data,
 )
+from app.models import H5075Measurement
 
 
 class HealthEndpointTests(TestCase):
@@ -122,6 +123,28 @@ class ReadH5075CommandTests(TestCase):
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[])):
             with self.assertRaises(CommandError):
                 call_command("read_h5075")
+
+    def test_command_save_persists_selected_reading(self) -> None:
+        weak = self._reading("AA:AA:AA:AA:AA:01", -80)
+        strong = self._reading("AA:AA:AA:AA:AA:02", -45)
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[weak, strong])):
+            call_command("read_h5075", "--save")
+
+        self.assertEqual(H5075Measurement.objects.count(), 1)
+        measurement = H5075Measurement.objects.first()
+        assert measurement is not None
+        self.assertEqual(measurement.address, "AA:AA:AA:AA:AA:02")
+        self.assertEqual(float(measurement.temperature_c), 23.4)
+
+    def test_command_save_all_persists_all_selected(self) -> None:
+        first = self._reading("AA:AA:AA:AA:AA:01", -80)
+        second = self._reading("AA:AA:AA:AA:AA:02", -45)
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[first, second])):
+            call_command("read_h5075", "--all", "--save")
+
+        self.assertEqual(H5075Measurement.objects.count(), 2)
 
 
 class ReadH5075HardwareCommandTests(TestCase):
