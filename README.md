@@ -73,18 +73,26 @@ Important variables:
 - `DJANGO_ALLOWED_HOSTS`
 - `SQLITE_PATH`
 
+For Docker dev with Vite proxy, ensure `DJANGO_ALLOWED_HOSTS` includes `backend` (and/or `govee-backend`).
+
 ## Useful commands
+
+Run all tests (backend + frontend):
+
+```bash
+make test
+```
 
 Run backend tests:
 
 ```bash
-docker compose exec backend python manage.py test
+make test-backend
 ```
 
 Run frontend tests:
 
 ```bash
-docker compose exec frontend bun run test
+make test-frontend
 ```
 
 Stop and remove containers:
