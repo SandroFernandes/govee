@@ -24,9 +24,9 @@ class Command(BaseCommand):
         )
         parser.add_argument("--timeout", type=float, default=10.0, help="BLE scan timeout in seconds.")
         parser.add_argument(
-            "--all",
+            "--strongest",
             action="store_true",
-            help="Print all matching H5075 readings (default prints strongest RSSI only).",
+            help="Use only the strongest RSSI reading (default uses all matches).",
         )
         parser.add_argument("--json", action="store_true", help="Output JSON.")
 
@@ -48,7 +48,7 @@ class Command(BaseCommand):
             )
 
         readings.sort(key=lambda item: item.rssi if item.rssi is not None else -9999, reverse=True)
-        selected = readings if options["all"] else readings[:1]
+        selected = readings[:1] if options["strongest"] else readings
 
         to_save: list[H5075Measurement] = []
         skipped_duplicates = 0

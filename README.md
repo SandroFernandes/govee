@@ -131,6 +131,8 @@ Read Govee H5075 data over Bluetooth (host machine):
 python backend/manage.py read_h5075 --timeout 12
 ```
 
+By default, this returns all matching H5075 devices. Use `--strongest` to keep only the strongest RSSI match.
+
 Target one sensor by MAC and print JSON:
 
 ```bash

@@ -94,7 +94,7 @@ class ReadH5075CommandTests(TestCase):
             rssi=rssi,
         )
 
-    def test_command_prints_strongest_signal_by_default(self) -> None:
+    def test_command_prints_all_readings_by_default(self) -> None:
         weak = self._reading("AA:AA:AA:AA:AA:01", -80)
         strong = self._reading("AA:AA:AA:AA:AA:02", -45)
 
@@ -104,19 +104,16 @@ class ReadH5075CommandTests(TestCase):
 
         output = stdout.getvalue().strip()
         self.assertIn("AA:AA:AA:AA:AA:02", output)
-        self.assertNotIn("AA:AA:AA:AA:AA:01", output)
-        self.assertEqual(H5075Measurement.objects.count(), 1)
-        saved = H5075Measurement.objects.first()
-        assert saved is not None
-        self.assertEqual(saved.address, "AA:AA:AA:AA:AA:02")
+        self.assertIn("AA:AA:AA:AA:AA:01", output)
+        self.assertEqual(H5075Measurement.objects.count(), 2)
 
-    def test_command_json_all_outputs_all_readings(self) -> None:
+    def test_command_json_outputs_all_readings_by_default(self) -> None:
         first = self._reading("AA:AA:AA:AA:AA:01", -80)
         second = self._reading("AA:AA:AA:AA:AA:02", -45)
 
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[first, second])):
             stdout = StringIO()
-            call_command("read_h5075", "--all", "--json", stdout=stdout)
+            call_command("read_h5075", "--json", stdout=stdout)
 
         payload = json.loads(stdout.getvalue())
         self.assertEqual(len(payload), 2)
@@ -134,7 +131,7 @@ class ReadH5075CommandTests(TestCase):
         strong = self._reading("AA:AA:AA:AA:AA:02", -45)
 
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[weak, strong])):
-            call_command("read_h5075")
+            call_command("read_h5075", "--strongest")
 
         self.assertEqual(H5075Measurement.objects.count(), 1)
         measurement = H5075Measurement.objects.first()
@@ -142,12 +139,12 @@ class ReadH5075CommandTests(TestCase):
         self.assertEqual(measurement.address, "AA:AA:AA:AA:AA:02")
         self.assertEqual(float(measurement.temperature_c), 23.4)
 
-    def test_command_all_persists_all_selected(self) -> None:
+    def test_command_persists_all_by_default(self) -> None:
         first = self._reading("AA:AA:AA:AA:AA:01", -80)
         second = self._reading("AA:AA:AA:AA:AA:02", -45)
 
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[first, second])):
-            call_command("read_h5075", "--all")
+            call_command("read_h5075")
 
         self.assertEqual(H5075Measurement.objects.count(), 2)
 
