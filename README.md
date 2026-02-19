@@ -75,6 +75,18 @@ Important variables:
 
 ## Useful commands
 
+Run backend tests:
+
+```bash
+docker compose exec backend python manage.py test
+```
+
+Run frontend tests:
+
+```bash
+docker compose exec frontend bun run test
+```
+
 Stop and remove containers:
 
 ```bash
