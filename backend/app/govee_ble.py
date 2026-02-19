@@ -17,6 +17,20 @@ class H5075Reading:
     rssi: int | None = None
 
 
+@dataclass(frozen=True)
+class H5075AdvertisementData:
+    address: str
+    name: str
+    manufacturer_id: int
+    payload_hex: str
+    service_uuids: tuple[str, ...]
+    temperature_c: float
+    humidity_pct: float
+    battery_pct: int
+    error: bool
+    rssi: int | None = None
+
+
 def decode_temp_humid(temp_humid_bytes: bytes) -> tuple[float, float]:
     base_num = (temp_humid_bytes[0] << 16) + (temp_humid_bytes[1] << 8) + temp_humid_bytes[2]
     is_negative = bool(base_num & 0x800000)
@@ -61,4 +75,36 @@ def parse_h5075_manufacturer_data(
         battery_pct=battery_pct,
         error=has_error,
         rssi=rssi,
+    )
+
+
+def parse_h5075_advertisement_data(
+    address: str,
+    local_name: str,
+    manufacturer_id: int,
+    data: bytes,
+    rssi: int | None,
+    service_uuids: list[str] | None = None,
+) -> H5075AdvertisementData | None:
+    reading = parse_h5075_manufacturer_data(
+        address=address,
+        local_name=local_name,
+        manufacturer_id=manufacturer_id,
+        data=data,
+        rssi=rssi,
+    )
+    if reading is None:
+        return None
+
+    return H5075AdvertisementData(
+        address=reading.address,
+        name=reading.name,
+        manufacturer_id=manufacturer_id,
+        payload_hex=data.hex(),
+        service_uuids=tuple(service_uuids or []),
+        temperature_c=reading.temperature_c,
+        humidity_pct=reading.humidity_pct,
+        battery_pct=reading.battery_pct,
+        error=reading.error,
+        rssi=reading.rssi,
     )

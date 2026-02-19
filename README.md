@@ -133,6 +133,18 @@ python backend/manage.py read_h5075 --timeout 12
 
 By default, this returns all matching H5075 devices. Use `--strongest` to keep only the strongest RSSI match.
 
+Read richer H5075 device snapshot data (payload + parsed fields) and store deduplicated records:
+
+```bash
+python backend/manage.py read_h5075_dump --timeout 12
+```
+
+JSON output for all snapshot fields:
+
+```bash
+python backend/manage.py read_h5075_dump --timeout 12 --json
+```
+
 Target one sensor by MAC and print JSON:
 
 ```bash

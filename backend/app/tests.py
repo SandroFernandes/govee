@@ -9,11 +9,13 @@ from django.test import Client, TestCase
 
 from app.govee_ble import (
     GOVEE_H5075_MFR_ID,
+    H5075AdvertisementData,
     H5075Reading,
     decode_temp_humid_battery_error,
+    parse_h5075_advertisement_data,
     parse_h5075_manufacturer_data,
 )
-from app.models import H5075Measurement
+from app.models import H5075AdvertisementSnapshot, H5075Measurement
 
 
 class HealthEndpointTests(TestCase):
@@ -79,6 +81,21 @@ class H5075ParserTests(TestCase):
         )
 
         self.assertIsNone(reading)
+
+    def test_parse_h5075_advertisement_data(self) -> None:
+        snapshot = parse_h5075_advertisement_data(
+            address="AA:BB:CC:DD:EE:FF",
+            local_name="H5075_LivingRoom",
+            manufacturer_id=GOVEE_H5075_MFR_ID,
+            data=bytes([0x00, 0x03, 0x94, 0x47, 0x55, 0x00]),
+            rssi=-62,
+            service_uuids=["180F"],
+        )
+
+        self.assertIsNotNone(snapshot)
+        assert snapshot is not None
+        self.assertEqual(snapshot.payload_hex, "000394475500")
+        self.assertEqual(snapshot.service_uuids, ("180F",))
 
 
 class ReadH5075CommandTests(TestCase):
@@ -229,3 +246,52 @@ class ReadH5075HardwareCommandTests(TestCase):
         self.assertGreaterEqual(len(payload), 1)
         first_address = payload[0]["address"].lower()
         self.assertEqual(first_address, mac.lower())
+
+
+class ReadH5075DumpCommandTests(TestCase):
+    @staticmethod
+    def _snapshot(address: str, rssi: int, payload_hex: str, temperature_c: float = 23.4) -> H5075AdvertisementData:
+        return H5075AdvertisementData(
+            address=address,
+            name="H5075",
+            manufacturer_id=GOVEE_H5075_MFR_ID,
+            payload_hex=payload_hex,
+            service_uuids=("180F",),
+            temperature_c=temperature_c,
+            humidity_pct=56.7,
+            battery_pct=85,
+            error=False,
+            rssi=rssi,
+        )
+
+    def test_dump_command_saves_snapshots(self) -> None:
+        a = self._snapshot("AA:AA:AA:AA:AA:01", -55, "000394475500")
+        b = self._snapshot("AA:AA:AA:AA:AA:02", -50, "000394475501")
+
+        with patch("app.management.commands.read_h5075_dump.Command._scan", new=AsyncMock(return_value=[a, b])):
+            call_command("read_h5075_dump")
+
+        self.assertEqual(H5075AdvertisementSnapshot.objects.count(), 2)
+
+    def test_dump_command_skips_duplicate_snapshots(self) -> None:
+        snapshot = self._snapshot("AA:AA:AA:AA:AA:01", -55, "000394475500")
+
+        with patch("app.management.commands.read_h5075_dump.Command._scan", new=AsyncMock(return_value=[snapshot])):
+            call_command("read_h5075_dump")
+
+        with patch("app.management.commands.read_h5075_dump.Command._scan", new=AsyncMock(return_value=[snapshot])):
+            call_command("read_h5075_dump")
+
+        self.assertEqual(H5075AdvertisementSnapshot.objects.count(), 1)
+
+    def test_dump_command_json_outputs_all(self) -> None:
+        a = self._snapshot("AA:AA:AA:AA:AA:01", -55, "000394475500")
+        b = self._snapshot("AA:AA:AA:AA:AA:02", -50, "000394475501")
+
+        with patch("app.management.commands.read_h5075_dump.Command._scan", new=AsyncMock(return_value=[a, b])):
+            stdout = StringIO()
+            call_command("read_h5075_dump", "--json", stdout=stdout)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(len(payload), 2)
+        self.assertIn("payload_hex", payload[0])
