@@ -1,4 +1,6 @@
+import asyncio
 import json
+import os
 from io import StringIO
 from unittest.mock import AsyncMock, patch
 
@@ -120,3 +122,62 @@ class ReadH5075CommandTests(TestCase):
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[])):
             with self.assertRaises(CommandError):
                 call_command("read_h5075")
+
+
+class ReadH5075HardwareCommandTests(TestCase):
+    def test_bluetooth_permissions_allow_scan(self) -> None:
+        if os.getenv("RUN_HARDWARE_TESTS") != "1":
+            self.skipTest("Set RUN_HARDWARE_TESTS=1 to run real BLE hardware tests")
+
+        from bleak import BleakScanner
+        from bleak.exc import BleakDBusError
+
+        try:
+            discovered = asyncio.run(BleakScanner.discover(timeout=2.0, return_adv=True))
+        except BleakDBusError as exc:
+            self.fail(f"Bluetooth permission/DBus access denied: {exc}")
+
+        self.assertIsInstance(discovered, dict)
+
+    def test_command_reads_real_hardware_when_enabled(self) -> None:
+        if os.getenv("RUN_HARDWARE_TESTS") != "1":
+            self.skipTest("Set RUN_HARDWARE_TESTS=1 to run real BLE hardware tests")
+
+        timeout = os.getenv("GOVEE_TEST_TIMEOUT", "15")
+        mac = os.getenv("GOVEE_TEST_MAC", "").strip()
+        name = os.getenv("GOVEE_TEST_NAME", "H5075").strip()
+
+        args = ["--timeout", timeout, "--json"]
+        if mac:
+            args.extend(["--mac", mac])
+        else:
+            args.extend(["--name-contains", name])
+
+        stdout = StringIO()
+        call_command("read_h5075", *args, stdout=stdout)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertGreaterEqual(len(payload), 1)
+        reading = payload[0]
+        self.assertIn("address", reading)
+        self.assertIn("temperature_c", reading)
+        self.assertIn("humidity_pct", reading)
+        self.assertIn("battery_pct", reading)
+
+    def test_command_reads_specific_mac_when_provided(self) -> None:
+        if os.getenv("RUN_HARDWARE_TESTS") != "1":
+            self.skipTest("Set RUN_HARDWARE_TESTS=1 to run real BLE hardware tests")
+
+        mac = os.getenv("GOVEE_TEST_MAC", "").strip()
+        if not mac:
+            self.skipTest("Set GOVEE_TEST_MAC to run strict MAC hardware test")
+
+        timeout = os.getenv("GOVEE_TEST_TIMEOUT", "15")
+
+        stdout = StringIO()
+        call_command("read_h5075", "--timeout", timeout, "--mac", mac, "--json", stdout=stdout)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertGreaterEqual(len(payload), 1)
+        first_address = payload[0]["address"].lower()
+        self.assertEqual(first_address, mac.lower())

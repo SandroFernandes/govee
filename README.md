@@ -95,6 +95,30 @@ Run backend tests:
 make test-backend
 ```
 
+Run real hardware BLE test (`read_h5075`, no mocks):
+
+```bash
+make test-hardware
+```
+
+Run Bluetooth permission/access test only:
+
+```bash
+make test-hardware-perms
+```
+
+Optional targeting:
+
+```bash
+GOVEE_TEST_MAC=AA:BB:CC:DD:EE:FF make test-hardware
+```
+
+Strict MAC-only hardware test:
+
+```bash
+GOVEE_TEST_MAC=AA:BB:CC:DD:EE:FF make test-hardware-mac
+```
+
 Run frontend tests:
 
 ```bash
@@ -119,7 +143,7 @@ Read Govee H5075 data from Docker backend container:
 docker compose exec backend python manage.py read_h5075 --timeout 12
 ```
 
-Docker BLE passthrough is enabled by mounting `/var/run/dbus` and `/dev/bus/usb` into the backend service. On Linux host, ensure Bluetooth is enabled and `bluetoothd` is running.
+Docker BLE passthrough is enabled by mounting `/var/run/dbus` and `/dev/bus/usb` into the backend service, plus `apparmor:unconfined` and BLE capabilities (`NET_ADMIN`, `NET_RAW`). On Linux host, ensure Bluetooth is enabled and `bluetoothd` is running.
 
 Stop and remove containers:
 

@@ -9,6 +9,11 @@ services:
     environment:
       - DJANGO_DEBUG=False
       - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+    security_opt:
+      - apparmor:unconfined
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     volumes:
       - sqlite_data:/data
       - /var/run/dbus:/var/run/dbus

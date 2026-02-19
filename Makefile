@@ -1,4 +1,4 @@
-.PHONY: test test-backend test-frontend smoke
+.PHONY: test test-backend test-frontend test-hardware test-hardware-perms test-hardware-mac smoke
 
 test:
 	docker compose up -d
@@ -10,6 +10,33 @@ test-backend:
 
 test-frontend:
 	docker compose exec -T frontend bun run test
+
+test-hardware:
+	docker compose up -d --build backend
+	docker compose exec -T \
+		-e RUN_HARDWARE_TESTS=1 \
+		-e GOVEE_TEST_TIMEOUT=$${GOVEE_TEST_TIMEOUT:-15} \
+		-e GOVEE_TEST_MAC=$${GOVEE_TEST_MAC:-} \
+		-e GOVEE_TEST_NAME=$${GOVEE_TEST_NAME:-H5075} \
+		backend python manage.py test app.tests.ReadH5075HardwareCommandTests
+
+test-hardware-perms:
+	docker compose up -d --build backend
+	docker compose exec -T \
+		-e RUN_HARDWARE_TESTS=1 \
+		backend python manage.py test app.tests.ReadH5075HardwareCommandTests.test_bluetooth_permissions_allow_scan
+
+test-hardware-mac:
+	@if [ -z "$$GOVEE_TEST_MAC" ]; then \
+		echo "GOVEE_TEST_MAC is required, e.g. GOVEE_TEST_MAC=AA:BB:CC:DD:EE:FF make test-hardware-mac"; \
+		exit 1; \
+	fi
+	docker compose up -d --build backend
+	docker compose exec -T \
+		-e RUN_HARDWARE_TESTS=1 \
+		-e GOVEE_TEST_TIMEOUT=$${GOVEE_TEST_TIMEOUT:-15} \
+		-e GOVEE_TEST_MAC=$${GOVEE_TEST_MAC} \
+		backend python manage.py test app.tests.ReadH5075HardwareCommandTests.test_command_reads_specific_mac_when_provided
 
 smoke:
 	docker compose up -d

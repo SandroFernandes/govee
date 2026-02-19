@@ -8,6 +8,11 @@ services:
       - .env
     environment:
       - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+    security_opt:
+      - apparmor:unconfined
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     volumes:
       - ./backend:/app
       - sqlite_data:/data
