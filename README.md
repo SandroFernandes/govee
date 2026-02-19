@@ -101,6 +101,26 @@ Run frontend tests:
 make test-frontend
 ```
 
+Read Govee H5075 data over Bluetooth (host machine):
+
+```bash
+python backend/manage.py read_h5075 --timeout 12
+```
+
+Target one sensor by MAC and print JSON:
+
+```bash
+python backend/manage.py read_h5075 --mac AA:BB:CC:DD:EE:FF --json
+```
+
+Read Govee H5075 data from Docker backend container:
+
+```bash
+docker compose exec backend python manage.py read_h5075 --timeout 12
+```
+
+Docker BLE passthrough is enabled by mounting `/var/run/dbus` and `/dev/bus/usb` into the backend service. On Linux host, ensure Bluetooth is enabled and `bluetoothd` is running.
+
 Stop and remove containers:
 
 ```bash
