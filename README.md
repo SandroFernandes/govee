@@ -34,6 +34,12 @@ Dockerized Django backend environment with current stable runtime images.
 	For production stack (Gunicorn backend + Nginx frontend), run:
 
 	```bash
+	cp .env.prod.example .env.prod
+	```
+
+	Then update `DJANGO_SECRET_KEY` and `DJANGO_ALLOWED_HOSTS` in `.env.prod`, and run:
+
+	```bash
 	docker compose -f docker-compose.prod.yml up --build
 	```
 
@@ -57,6 +63,7 @@ The frontend runs in a separate `frontend` service and hot-reloads from `./front
 
 - `.env` is included for local development defaults.
 - `.env.example` is a template you can copy/adjust for other environments.
+- `.env.prod.example` is a production template (`.env.prod` is used by `docker-compose.prod.yml`).
 - SQLite is persisted in Docker volume `sqlite_data` at `/data/db.sqlite3`.
 
 Important variables:

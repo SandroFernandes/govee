@@ -5,7 +5,9 @@ services:
       dockerfile: Dockerfile
     container_name: govee-backend-prod
     env_file:
-      - .env
+      - .env.prod
+    environment:
+      - DJANGO_DEBUG=False
     volumes:
       - sqlite_data:/data
     ports:

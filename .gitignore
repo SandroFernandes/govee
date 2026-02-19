@@ -34,6 +34,7 @@ backend/db.sqlite3
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # IDE / editor
 .vscode/
