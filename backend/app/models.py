@@ -8,6 +8,7 @@ class H5075Measurement(models.Model):
     humidity_pct = models.DecimalField(max_digits=5, decimal_places=2)
     battery_pct = models.PositiveSmallIntegerField()
     error = models.BooleanField(default=False)
+    # RSSI (Received Signal Strength Indicator): Bluetooth signal strength in dBm; higher (less negative) is stronger.
     rssi = models.SmallIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 

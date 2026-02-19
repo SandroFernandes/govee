@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict
+from decimal import Decimal
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -28,7 +29,6 @@ class Command(BaseCommand):
             help="Print all matching H5075 readings (default prints strongest RSSI only).",
         )
         parser.add_argument("--json", action="store_true", help="Output JSON.")
-        parser.add_argument("--save", action="store_true", help="Save selected readings to the database.")
 
     def handle(self, *args, **options) -> None:
         try:
@@ -50,22 +50,30 @@ class Command(BaseCommand):
         readings.sort(key=lambda item: item.rssi if item.rssi is not None else -9999, reverse=True)
         selected = readings if options["all"] else readings[:1]
 
-        if options["save"]:
-            H5075Measurement.objects.bulk_create(
-                [
-                    H5075Measurement(
-                        address=item.address,
-                        name=item.name,
-                        temperature_c=item.temperature_c,
-                        humidity_pct=item.humidity_pct,
-                        battery_pct=item.battery_pct,
-                        error=item.error,
-                        rssi=item.rssi,
-                    )
-                    for item in selected
-                ]
+        to_save: list[H5075Measurement] = []
+        skipped_duplicates = 0
+
+        for item in selected:
+            if self._is_duplicate(item):
+                skipped_duplicates += 1
+                continue
+
+            to_save.append(
+                H5075Measurement(
+                    address=item.address,
+                    name=item.name,
+                    temperature_c=item.temperature_c,
+                    humidity_pct=item.humidity_pct,
+                    battery_pct=item.battery_pct,
+                    error=item.error,
+                    rssi=item.rssi,
+                )
             )
-            self.stderr.write(f"Saved {len(selected)} reading(s)")
+
+        if to_save:
+            H5075Measurement.objects.bulk_create(to_save)
+
+        self.stderr.write(f"Saved {len(to_save)} reading(s), skipped {skipped_duplicates} duplicate(s)")
 
         if options["json"]:
             self.stdout.write(json.dumps([asdict(item) for item in selected], indent=2))
@@ -80,6 +88,18 @@ class Command(BaseCommand):
             if item.error:
                 line += " error=true"
             self.stdout.write(line)
+
+    def _is_duplicate(self, reading: H5075Reading) -> bool:
+        latest = H5075Measurement.objects.filter(address=reading.address).order_by("-created_at").first()
+        if latest is None:
+            return False
+
+        return (
+            latest.temperature_c == Decimal(f"{reading.temperature_c:.2f}")
+            and latest.humidity_pct == Decimal(f"{reading.humidity_pct:.2f}")
+            and latest.battery_pct == reading.battery_pct
+            and latest.error == reading.error
+        )
 
     async def _scan(self, mac: str, name_contains: str, timeout: float) -> list[H5075Reading]:
         from bleak import BleakScanner

@@ -137,10 +137,12 @@ Target one sensor by MAC and print JSON:
 python backend/manage.py read_h5075 --mac AA:BB:CC:DD:EE:FF --json
 ```
 
-Store selected reading(s) in DB:
+Each `read_h5075` run automatically stores selected reading(s) in the `H5075Measurement` table and skips duplicates for unchanged values on the same device address.
+
+Read and store selected reading(s):
 
 ```bash
-python backend/manage.py read_h5075 --timeout 12 --save
+python backend/manage.py read_h5075 --timeout 12
 ```
 
 Read Govee H5075 data from Docker backend container:

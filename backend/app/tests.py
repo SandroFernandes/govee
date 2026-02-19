@@ -105,6 +105,10 @@ class ReadH5075CommandTests(TestCase):
         output = stdout.getvalue().strip()
         self.assertIn("AA:AA:AA:AA:AA:02", output)
         self.assertNotIn("AA:AA:AA:AA:AA:01", output)
+        self.assertEqual(H5075Measurement.objects.count(), 1)
+        saved = H5075Measurement.objects.first()
+        assert saved is not None
+        self.assertEqual(saved.address, "AA:AA:AA:AA:AA:02")
 
     def test_command_json_all_outputs_all_readings(self) -> None:
         first = self._reading("AA:AA:AA:AA:AA:01", -80)
@@ -118,18 +122,19 @@ class ReadH5075CommandTests(TestCase):
         self.assertEqual(len(payload), 2)
         self.assertEqual(payload[0]["address"], "AA:AA:AA:AA:AA:02")
         self.assertEqual(payload[1]["address"], "AA:AA:AA:AA:AA:01")
+        self.assertEqual(H5075Measurement.objects.count(), 2)
 
     def test_command_raises_when_no_readings_found(self) -> None:
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[])):
             with self.assertRaises(CommandError):
                 call_command("read_h5075")
 
-    def test_command_save_persists_selected_reading(self) -> None:
+    def test_command_persists_selected_reading(self) -> None:
         weak = self._reading("AA:AA:AA:AA:AA:01", -80)
         strong = self._reading("AA:AA:AA:AA:AA:02", -45)
 
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[weak, strong])):
-            call_command("read_h5075", "--save")
+            call_command("read_h5075")
 
         self.assertEqual(H5075Measurement.objects.count(), 1)
         measurement = H5075Measurement.objects.first()
@@ -137,12 +142,35 @@ class ReadH5075CommandTests(TestCase):
         self.assertEqual(measurement.address, "AA:AA:AA:AA:AA:02")
         self.assertEqual(float(measurement.temperature_c), 23.4)
 
-    def test_command_save_all_persists_all_selected(self) -> None:
+    def test_command_all_persists_all_selected(self) -> None:
         first = self._reading("AA:AA:AA:AA:AA:01", -80)
         second = self._reading("AA:AA:AA:AA:AA:02", -45)
 
         with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[first, second])):
-            call_command("read_h5075", "--all", "--save")
+            call_command("read_h5075", "--all")
+
+        self.assertEqual(H5075Measurement.objects.count(), 2)
+
+    def test_command_skips_duplicate_measurement(self) -> None:
+        reading = self._reading("AA:AA:AA:AA:AA:01", -50)
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[reading])):
+            call_command("read_h5075")
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[reading])):
+            call_command("read_h5075")
+
+        self.assertEqual(H5075Measurement.objects.count(), 1)
+
+    def test_command_persists_when_measurement_changes(self) -> None:
+        first = self._reading("AA:AA:AA:AA:AA:01", -50, temperature_c=23.4)
+        changed = self._reading("AA:AA:AA:AA:AA:01", -45, temperature_c=24.1)
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[first])):
+            call_command("read_h5075")
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[changed])):
+            call_command("read_h5075")
 
         self.assertEqual(H5075Measurement.objects.count(), 2)
 
