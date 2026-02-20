@@ -15,7 +15,9 @@ from app.govee_ble import (
     parse_h5075_advertisement_data,
     parse_h5075_manufacturer_data,
 )
+from app.management.commands.read_h5075_history import HistoryPoint
 from app.models import H5075AdvertisementSnapshot, H5075Measurement
+from app.models import H5075HistoricalMeasurement
 
 
 class HealthEndpointTests(TestCase):
@@ -295,3 +297,62 @@ class ReadH5075DumpCommandTests(TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(len(payload), 2)
         self.assertIn("payload_hex", payload[0])
+
+
+class ReadH5075HistoryCommandTests(TestCase):
+    def test_history_command_saves_records(self) -> None:
+        points = [
+            HistoryPoint(
+                address="AA:BB:CC:DD:EE:FF",
+                name="H5075_A",
+                measured_at="2026-02-20T10:00:00+00:00",
+                temperature_c=21.1,
+                humidity_pct=45.2,
+            ),
+            HistoryPoint(
+                address="AA:BB:CC:DD:EE:FF",
+                name="H5075_A",
+                measured_at="2026-02-20T10:01:00+00:00",
+                temperature_c=21.2,
+                humidity_pct=45.3,
+            ),
+        ]
+
+        with patch("app.management.commands.read_h5075_history.Command._read_history", new=AsyncMock(return_value=points)):
+            call_command("read_h5075_history", "--mac", "AA:BB:CC:DD:EE:FF")
+
+        self.assertEqual(H5075HistoricalMeasurement.objects.count(), 2)
+
+    def test_history_command_skips_duplicates(self) -> None:
+        point = HistoryPoint(
+            address="AA:BB:CC:DD:EE:FF",
+            name="H5075_A",
+            measured_at="2026-02-20T10:00:00+00:00",
+            temperature_c=21.1,
+            humidity_pct=45.2,
+        )
+
+        with patch("app.management.commands.read_h5075_history.Command._read_history", new=AsyncMock(return_value=[point])):
+            call_command("read_h5075_history", "--mac", "AA:BB:CC:DD:EE:FF")
+
+        with patch("app.management.commands.read_h5075_history.Command._read_history", new=AsyncMock(return_value=[point])):
+            call_command("read_h5075_history", "--mac", "AA:BB:CC:DD:EE:FF")
+
+        self.assertEqual(H5075HistoricalMeasurement.objects.count(), 1)
+
+    def test_history_command_json_output(self) -> None:
+        point = HistoryPoint(
+            address="AA:BB:CC:DD:EE:FF",
+            name="H5075_A",
+            measured_at="2026-02-20T10:00:00+00:00",
+            temperature_c=21.1,
+            humidity_pct=45.2,
+        )
+
+        with patch("app.management.commands.read_h5075_history.Command._read_history", new=AsyncMock(return_value=[point])):
+            stdout = StringIO()
+            call_command("read_h5075_history", "--mac", "AA:BB:CC:DD:EE:FF", "--json", stdout=stdout)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["address"], "AA:BB:CC:DD:EE:FF")

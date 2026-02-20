@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from app.models import H5075AdvertisementSnapshot, H5075Measurement
+from app.models import H5075AdvertisementSnapshot, H5075HistoricalMeasurement, H5075Measurement
 
 
 @admin.register(H5075Measurement)
@@ -25,3 +25,10 @@ class H5075AdvertisementSnapshotAdmin(admin.ModelAdmin):
     )
     list_filter = ("error", "manufacturer_id", "created_at")
     search_fields = ("address", "name", "payload_hex")
+
+
+@admin.register(H5075HistoricalMeasurement)
+class H5075HistoricalMeasurementAdmin(admin.ModelAdmin):
+    list_display = ("measured_at", "name", "address", "temperature_c", "humidity_pct")
+    list_filter = ("measured_at",)
+    search_fields = ("address", "name")

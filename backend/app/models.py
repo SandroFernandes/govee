@@ -43,3 +43,24 @@ class H5075AdvertisementSnapshot(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name or 'H5075'} {self.address} payload={self.payload_hex}"
+
+
+class H5075HistoricalMeasurement(models.Model):
+    address = models.CharField(max_length=17, db_index=True)
+    name = models.CharField(max_length=128, blank=True)
+    measured_at = models.DateTimeField(db_index=True)
+    temperature_c = models.DecimalField(max_digits=5, decimal_places=2)
+    humidity_pct = models.DecimalField(max_digits=5, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-measured_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["address", "measured_at"],
+                name="uniq_h5075_history_address_timestamp",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name or 'H5075'} {self.address} @ {self.measured_at.isoformat()}"

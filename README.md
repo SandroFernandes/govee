@@ -145,6 +145,14 @@ JSON output for all snapshot fields:
 python backend/manage.py read_h5075_dump --timeout 12 --json
 ```
 
+Read and import historical records stored on the H5075 device (up to 20 days):
+
+```bash
+python backend/manage.py read_h5075_history --mac AA:BB:CC:DD:EE:FF --start 480:00 --end 0:00
+```
+
+Historical records are deduplicated in DB by `(address, measured_at)`.
+
 Target one sensor by MAC and print JSON:
 
 ```bash
