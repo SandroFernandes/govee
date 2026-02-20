@@ -44,6 +44,66 @@ class AdminEndpointTests(TestCase):
         self.assertIn("/admin/login/", response["Location"])
 
 
+class HistoryApiEndpointTests(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+
+    def test_history_api_returns_chart_points(self) -> None:
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:01",
+            name="H5075_A",
+            measured_at=timezone.now() - timedelta(hours=2),
+            temperature_c=21.1,
+            humidity_pct=45.2,
+        )
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:02",
+            name="H5075_B",
+            measured_at=timezone.now() - timedelta(hours=1),
+            temperature_c=19.5,
+            humidity_pct=50.1,
+        )
+
+        response = self.client.get("/api/history/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 2)
+        self.assertEqual(len(payload["points"]), 2)
+        self.assertIn("measured_at", payload["points"][0])
+        self.assertIn("temperature_c", payload["points"][0])
+        self.assertIn("humidity_pct", payload["points"][0])
+
+    def test_history_api_filters_by_address(self) -> None:
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:01",
+            name="H5075_A",
+            measured_at=timezone.now() - timedelta(hours=2),
+            temperature_c=21.1,
+            humidity_pct=45.2,
+        )
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:02",
+            name="H5075_B",
+            measured_at=timezone.now() - timedelta(hours=1),
+            temperature_c=19.5,
+            humidity_pct=50.1,
+        )
+
+        response = self.client.get("/api/history/?address=AA:BB:CC:DD:EE:01")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["points"][0]["address"], "AA:BB:CC:DD:EE:01")
+
+    def test_history_api_rejects_invalid_limit(self) -> None:
+        response = self.client.get("/api/history/?limit=abc")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Invalid 'limit'", response.json()["error"])
+
+
 class H5075ParserTests(TestCase):
     def test_decode_temp_humidity_battery(self) -> None:
         payload = bytes([0x03, 0x94, 0x47, 0x55])

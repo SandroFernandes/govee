@@ -197,6 +197,36 @@ Read Govee H5075 data from Docker backend container:
 docker compose exec backend python manage.py read_h5075 --timeout 12
 ```
 
+Chart API for frontend (historical series):
+
+```bash
+GET /api/history/?address=AA:BB:CC:DD:EE:FF&hours=168&limit=2000
+```
+
+Query params:
+
+- `address` (optional): one device MAC
+- `hours` (optional): only points newer than N hours
+- `limit` (optional, default `2000`, max `10000`): max points returned
+
+Response shape:
+
+```json
+{
+	"count": 2,
+	"filters": {"address": null, "hours": null, "limit": 2000},
+	"points": [
+		{
+			"address": "AA:BB:CC:DD:EE:FF",
+			"name": "H5075_A",
+			"measured_at": "2026-02-20T10:00:00+00:00",
+			"temperature_c": 21.1,
+			"humidity_pct": 45.2
+		}
+	]
+}
+```
+
 Docker BLE passthrough is enabled by mounting `/var/run/dbus` and `/dev/bus/usb` into the backend service, plus `apparmor:unconfined` and BLE capabilities (`NET_ADMIN`, `NET_RAW`). On Linux host, ensure Bluetooth is enabled and `bluetoothd` is running.
 
 Stop and remove containers:
