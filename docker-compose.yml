@@ -23,6 +23,42 @@ services:
       - "8000:8000"
     restart: unless-stopped
 
+  history-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: govee-history-sync
+    env_file:
+      - .env
+    environment:
+      - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+      - GOVEE_HISTORY_SYNC_DAYS=4
+      - GOVEE_HISTORY_CHECK_INTERVAL_SECONDS=43200
+      - GOVEE_HISTORY_TIMEOUT=25
+      - GOVEE_HISTORY_RETRIES=3
+    security_opt:
+      - apparmor:unconfined
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./backend:/app
+      - sqlite_data:/data
+      - /var/run/dbus:/var/run/dbus
+      - /dev/bus/usb:/dev/bus/usb
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+      while true; do
+        python manage.py sync_h5075_history
+          --days $${GOVEE_HISTORY_SYNC_DAYS}
+          --timeout $${GOVEE_HISTORY_TIMEOUT}
+          --retries $${GOVEE_HISTORY_RETRIES};
+        sleep $${GOVEE_HISTORY_CHECK_INTERVAL_SECONDS};
+      done"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   frontend:
     image: oven/bun:1
     container_name: govee-frontend

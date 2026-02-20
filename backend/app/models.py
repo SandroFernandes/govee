@@ -64,3 +64,18 @@ class H5075HistoricalMeasurement(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name or 'H5075'} {self.address} @ {self.measured_at.isoformat()}"
+
+
+class H5075HistorySyncState(models.Model):
+    job_name = models.CharField(max_length=64, unique=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    last_status = models.CharField(max_length=16, default="never")
+    last_error = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["job_name"]
+
+    def __str__(self) -> str:
+        return f"{self.job_name} ({self.last_status})"

@@ -59,6 +59,8 @@ Dockerized Django backend environment with current stable runtime images.
 
 The frontend runs in a separate `frontend` service and hot-reloads from `./frontend`.
 
+Historical sync is also automated by the `history-sync` service: it checks periodically and runs `read_h5075_history` only every 4 days by default.
+
 ## Environment config
 
 - `.env` is included for local development defaults.
@@ -72,6 +74,10 @@ Important variables:
 - `DJANGO_DEBUG`
 - `DJANGO_ALLOWED_HOSTS`
 - `SQLITE_PATH`
+- `GOVEE_HISTORY_SYNC_DAYS` (default `4`)
+- `GOVEE_HISTORY_CHECK_INTERVAL_SECONDS` (default `43200`, every 12h check)
+- `GOVEE_HISTORY_TIMEOUT` (default `25`)
+- `GOVEE_HISTORY_RETRIES` (default `3`)
 
 For Docker dev with Vite proxy, ensure `DJANGO_ALLOWED_HOSTS` includes `backend` (and/or `govee-backend`).
 
@@ -149,6 +155,12 @@ Read and import historical records stored on all nearby H5075 devices (up to 20 
 
 ```bash
 python backend/manage.py read_h5075_history --start 480:00 --end 0:00
+```
+
+Run due-based sync manually (uses interval, default every 4 days):
+
+```bash
+python backend/manage.py sync_h5075_history --days 4
 ```
 
 If connections are unstable, increase timeout and retries:

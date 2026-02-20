@@ -1,11 +1,13 @@
 import asyncio
 import json
 import os
+from datetime import timedelta
 from io import StringIO
 from unittest.mock import AsyncMock, patch
 
 from django.core.management import CommandError, call_command
 from django.test import Client, TestCase
+from django.utils import timezone
 
 from app.govee_ble import (
     GOVEE_H5075_MFR_ID,
@@ -16,7 +18,7 @@ from app.govee_ble import (
     parse_h5075_manufacturer_data,
 )
 from app.management.commands.read_h5075_history import HistoryPoint
-from app.models import H5075AdvertisementSnapshot, H5075Measurement
+from app.models import H5075AdvertisementSnapshot, H5075HistorySyncState, H5075Measurement
 from app.models import H5075HistoricalMeasurement
 
 
@@ -394,3 +396,39 @@ class ReadH5075HistoryCommandTests(TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["address"], "AA:BB:CC:DD:EE:FF")
+
+
+class SyncH5075HistoryCommandTests(TestCase):
+    def test_sync_runs_when_never_succeeded(self) -> None:
+        with patch("app.management.commands.sync_h5075_history.call_command") as mocked_call:
+            call_command("sync_h5075_history", "--days", "4")
+
+        state = H5075HistorySyncState.objects.get(job_name="read_h5075_history")
+        self.assertEqual(state.last_status, "success")
+        self.assertIsNotNone(state.last_success_at)
+        mocked_call.assert_called_once()
+
+    def test_sync_skips_when_not_due(self) -> None:
+        now = timezone.now()
+        H5075HistorySyncState.objects.create(
+            job_name="read_h5075_history",
+            last_status="success",
+            last_attempt_at=now,
+            last_success_at=now - timedelta(days=1),
+        )
+
+        with patch("app.management.commands.sync_h5075_history.call_command") as mocked_call:
+            stdout = StringIO()
+            call_command("sync_h5075_history", "--days", "4", stdout=stdout)
+
+        self.assertIn("Skip: last successful sync", stdout.getvalue())
+        mocked_call.assert_not_called()
+
+    def test_sync_records_failure_state(self) -> None:
+        with patch("app.management.commands.sync_h5075_history.call_command", side_effect=CommandError("boom")):
+            with self.assertRaises(CommandError):
+                call_command("sync_h5075_history", "--days", "4")
+
+        state = H5075HistorySyncState.objects.get(job_name="read_h5075_history")
+        self.assertEqual(state.last_status, "error")
+        self.assertIn("boom", state.last_error)
