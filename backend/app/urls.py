@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.urls import path
 from django.utils import timezone
 
-from app.models import H5075HistoricalMeasurement
+from app.models import H5075DeviceAlias, H5075HistoricalMeasurement
 
 
 def health(_: object) -> JsonResponse:
@@ -47,11 +47,16 @@ def history_values(request: object) -> JsonResponse:
         queryset = queryset.filter(measured_at__gte=cutoff)
 
     rows = list(queryset[:limit])
+    address_keys = {(row.address or "").strip().lower() for row in rows if row.address}
+    alias_map = {
+        item.address.lower(): item.alias
+        for item in H5075DeviceAlias.objects.filter(address__in=address_keys)
+    }
 
     points = [
         {
             "address": row.address,
-            "name": row.name,
+            "name": alias_map.get((row.address or "").strip().lower(), row.name),
             "measured_at": row.measured_at.isoformat(),
             "temperature_c": float(row.temperature_c),
             "humidity_pct": float(row.humidity_pct),

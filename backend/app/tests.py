@@ -18,7 +18,7 @@ from app.govee_ble import (
     parse_h5075_manufacturer_data,
 )
 from app.management.commands.read_h5075_history import HistoryPoint
-from app.models import H5075AdvertisementSnapshot, H5075HistorySyncState, H5075Measurement
+from app.models import H5075AdvertisementSnapshot, H5075DeviceAlias, H5075HistorySyncState, H5075Measurement
 from app.models import H5075HistoricalMeasurement
 
 
@@ -102,6 +102,22 @@ class HistoryApiEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("Invalid 'limit'", response.json()["error"])
+
+    def test_history_api_uses_device_alias_name(self) -> None:
+        H5075DeviceAlias.objects.create(address="aa:bb:cc:dd:ee:01", alias="Bedroom")
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:01",
+            name="H5075_RAW",
+            measured_at=timezone.now() - timedelta(hours=2),
+            temperature_c=21.1,
+            humidity_pct=45.2,
+        )
+
+        response = self.client.get("/api/history/?address=AA:BB:CC:DD:EE:01")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["points"][0]["name"], "Bedroom")
 
 
 class H5075ParserTests(TestCase):
@@ -251,6 +267,20 @@ class ReadH5075CommandTests(TestCase):
             call_command("read_h5075")
 
         self.assertEqual(H5075Measurement.objects.count(), 2)
+
+    def test_command_uses_alias_name_when_defined(self) -> None:
+        H5075DeviceAlias.objects.create(address="aa:aa:aa:aa:aa:01", alias="Living Room")
+        reading = self._reading("AA:AA:AA:AA:AA:01", -50)
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[reading])):
+            stdout = StringIO()
+            call_command("read_h5075", "--json", stdout=stdout)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload[0]["name"], "Living Room")
+        measurement = H5075Measurement.objects.first()
+        assert measurement is not None
+        self.assertEqual(measurement.name, "Living Room")
 
 
 class ReadH5075HardwareCommandTests(TestCase):

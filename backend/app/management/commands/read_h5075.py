@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand, CommandError
 
 from app.govee_ble import H5075Reading, parse_h5075_manufacturer_data
-from app.models import H5075Measurement
+from app.models import H5075DeviceAlias, H5075Measurement
 
 
 class Command(BaseCommand):
@@ -49,6 +49,7 @@ class Command(BaseCommand):
 
         readings.sort(key=lambda item: item.rssi if item.rssi is not None else -9999, reverse=True)
         selected = readings[:1] if options["strongest"] else readings
+        name_map = self._get_name_map([item.address for item in selected])
 
         to_save: list[H5075Measurement] = []
         skipped_duplicates = 0
@@ -61,7 +62,7 @@ class Command(BaseCommand):
             to_save.append(
                 H5075Measurement(
                     address=item.address,
-                    name=item.name,
+                    name=name_map.get(item.address.lower(), item.name),
                     temperature_c=item.temperature_c,
                     humidity_pct=item.humidity_pct,
                     battery_pct=item.battery_pct,
@@ -76,12 +77,18 @@ class Command(BaseCommand):
         self.stderr.write(f"Saved {len(to_save)} reading(s), skipped {skipped_duplicates} duplicate(s)")
 
         if options["json"]:
-            self.stdout.write(json.dumps([asdict(item) for item in selected], indent=2))
+            payload = []
+            for item in selected:
+                row = asdict(item)
+                row["name"] = name_map.get(item.address.lower(), item.name)
+                payload.append(row)
+            self.stdout.write(json.dumps(payload, indent=2))
             return
 
         for item in selected:
+            name = name_map.get(item.address.lower(), item.name)
             line = (
-                f"{item.name} [{item.address}] "
+                f"{name} [{item.address}] "
                 f"temp={item.temperature_c:.1f}°C humidity={item.humidity_pct:.1f}% "
                 f"battery={item.battery_pct}% rssi={item.rssi}"
             )
@@ -129,3 +136,12 @@ class Command(BaseCommand):
                     matches.append(parsed)
 
         return matches
+
+    @staticmethod
+    def _get_name_map(addresses: list[str]) -> dict[str, str]:
+        normalized = sorted({(address or "").strip().lower() for address in addresses if address})
+        if not normalized:
+            return {}
+
+        aliases = H5075DeviceAlias.objects.filter(address__in=normalized)
+        return {item.address.lower(): item.alias for item in aliases}

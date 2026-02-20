@@ -66,6 +66,29 @@ class H5075HistoricalMeasurement(models.Model):
         return f"{self.name or 'H5075'} {self.address} @ {self.measured_at.isoformat()}"
 
 
+class H5075DeviceAlias(models.Model):
+    address = models.CharField(max_length=17, unique=True)
+    alias = models.CharField(max_length=128, blank=True)
+    detected_name = models.CharField(max_length=128, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["alias", "address"]
+
+    def save(self, *args, **kwargs):
+        self.address = (self.address or "").strip().lower()
+        self.alias = (self.alias or "").strip()
+        self.detected_name = (self.detected_name or "").strip()
+        return super().save(*args, **kwargs)
+
+    @property
+    def display_name(self) -> str:
+        return self.alias or self.detected_name or self.address
+
+    def __str__(self) -> str:
+        return f"{self.display_name} [{self.address}]"
+
+
 class H5075HistorySyncState(models.Model):
     job_name = models.CharField(max_length=64, unique=True)
     last_attempt_at = models.DateTimeField(null=True, blank=True)

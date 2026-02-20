@@ -57,6 +57,8 @@ Dockerized Django backend environment with current stable runtime images.
 
 	- http://localhost:8000/admin/
 
+To assign human-friendly names (e.g., Bedroom, Living Room), create entries in `H5075 Device Aliases` (fields: BLE MAC `address` and `alias`).
+
 The frontend runs in a separate `frontend` service and hot-reloads from `./frontend`.
 
 Historical sync is also automated by the `history-sync` service: it checks periodically and runs `read_h5075_history` only every 4 days by default.

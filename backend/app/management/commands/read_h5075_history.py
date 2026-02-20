@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from app.govee_ble import decode_temp_humid
-from app.models import H5075HistoricalMeasurement
+from app.models import H5075DeviceAlias, H5075HistoricalMeasurement
 
 
 @dataclass(frozen=True)
@@ -98,13 +98,15 @@ class Command(BaseCommand):
                 raise CommandError(f"No historical records returned by device(s). Errors: {'; '.join(failures)}")
             raise CommandError("No historical records returned by device(s).")
 
+        name_map = self._get_name_map([item.address for item in points])
+
         before_count = H5075HistoricalMeasurement.objects.count()
 
         H5075HistoricalMeasurement.objects.bulk_create(
             [
                 H5075HistoricalMeasurement(
                     address=item.address,
-                    name=item.name,
+                    name=name_map.get(item.address.lower(), item.name),
                     measured_at=timezone.datetime.fromisoformat(item.measured_at),
                     temperature_c=item.temperature_c,
                     humidity_pct=item.humidity_pct,
@@ -123,18 +125,33 @@ class Command(BaseCommand):
             self.stderr.write(f"Skipped {len(failures)} device(s) due to errors: {'; '.join(failures)}")
 
         if options["json"]:
-            self.stdout.write(json.dumps([asdict(p) for p in points], indent=2))
+            payload = []
+            for item in points:
+                row = asdict(item)
+                row["name"] = name_map.get(item.address.lower(), item.name)
+                payload.append(row)
+            self.stdout.write(json.dumps(payload, indent=2))
             return
 
         for item in points:
+            name = name_map.get(item.address.lower(), item.name)
             self.stdout.write(
-                f"{item.measured_at} {item.name} [{item.address}] "
+                f"{item.measured_at} {name} [{item.address}] "
                 f"temp={item.temperature_c:.1f}°C humidity={item.humidity_pct:.1f}%"
             )
 
     @staticmethod
     def _configure_ble_logging() -> None:
         logging.getLogger("bleak.backends.bluezdbus.version").setLevel(logging.ERROR)
+
+    @staticmethod
+    def _get_name_map(addresses: list[str]) -> dict[str, str]:
+        normalized = sorted({(address or "").strip().lower() for address in addresses if address})
+        if not normalized:
+            return {}
+
+        aliases = H5075DeviceAlias.objects.filter(address__in=normalized)
+        return {item.address.lower(): item.alias for item in aliases}
 
     async def _collect_history(
         self,

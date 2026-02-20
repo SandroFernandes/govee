@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from app.models import H5075AdvertisementSnapshot, H5075HistoricalMeasurement, H5075HistorySyncState, H5075Measurement
+from app.models import (
+    H5075AdvertisementSnapshot,
+    H5075DeviceAlias,
+    H5075HistoricalMeasurement,
+    H5075HistorySyncState,
+    H5075Measurement,
+)
 
 
 @admin.register(H5075Measurement)
@@ -39,3 +45,9 @@ class H5075HistorySyncStateAdmin(admin.ModelAdmin):
     list_display = ("job_name", "last_status", "last_attempt_at", "last_success_at", "updated_at")
     list_filter = ("last_status", "updated_at")
     search_fields = ("job_name",)
+
+
+@admin.register(H5075DeviceAlias)
+class H5075DeviceAliasAdmin(admin.ModelAdmin):
+    list_display = ("alias", "address", "updated_at")
+    search_fields = ("alias", "address")
