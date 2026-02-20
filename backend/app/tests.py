@@ -300,6 +300,44 @@ class ReadH5075DumpCommandTests(TestCase):
 
 
 class ReadH5075HistoryCommandTests(TestCase):
+    def test_history_command_defaults_to_all_devices(self) -> None:
+        points_a = [
+            HistoryPoint(
+                address="AA:BB:CC:DD:EE:01",
+                name="H5075_A",
+                measured_at="2026-02-20T10:00:00+00:00",
+                temperature_c=21.1,
+                humidity_pct=45.2,
+            )
+        ]
+        points_b = [
+            HistoryPoint(
+                address="AA:BB:CC:DD:EE:02",
+                name="H5075_B",
+                measured_at="2026-02-20T10:00:00+00:00",
+                temperature_c=19.5,
+                humidity_pct=50.1,
+            )
+        ]
+
+        async def fake_read_history(mac: str, start_minutes: int, end_minutes: int, timeout: float) -> list[HistoryPoint]:
+            if mac == "aa:bb:cc:dd:ee:01":
+                return points_a
+            if mac == "aa:bb:cc:dd:ee:02":
+                return points_b
+            return []
+
+        with patch(
+            "app.management.commands.read_h5075_history.Command._discover_targets",
+            new=AsyncMock(return_value=["aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02"]),
+        ), patch(
+            "app.management.commands.read_h5075_history.Command._read_history",
+            new=AsyncMock(side_effect=fake_read_history),
+        ):
+            call_command("read_h5075_history")
+
+        self.assertEqual(H5075HistoricalMeasurement.objects.count(), 2)
+
     def test_history_command_saves_records(self) -> None:
         points = [
             HistoryPoint(

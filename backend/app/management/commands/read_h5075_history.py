@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 
@@ -32,7 +33,13 @@ class Command(BaseCommand):
     RECORDS_TX_COMPLETED = bytearray([0xEE, 0x01])
 
     def add_arguments(self, parser) -> None:
-        parser.add_argument("--mac", type=str, required=True, help="Target H5075 MAC address.")
+        parser.add_argument("--mac", type=str, default="", help="Target H5075 MAC address (optional).")
+        parser.add_argument(
+            "--name-contains",
+            type=str,
+            default="H5075",
+            help="Filter by device name substring when --mac is not provided.",
+        )
         parser.add_argument(
             "--start",
             type=str,
@@ -46,12 +53,19 @@ class Command(BaseCommand):
             help="Newest point in the past as hhh:mm.",
         )
         parser.add_argument("--timeout", type=float, default=20.0, help="Command timeout in seconds.")
+        parser.add_argument(
+            "--retries",
+            type=int,
+            default=2,
+            help="Connection retries per device when history read fails.",
+        )
         parser.add_argument("--json", action="store_true", help="Output JSON.")
 
     def handle(self, *args, **options) -> None:
-        mac = (options["mac"] or "").strip()
-        if not mac:
-            raise CommandError("--mac is required")
+        self._configure_ble_logging()
+
+        mac = (options["mac"] or "").strip().lower()
+        name_contains = (options["name_contains"] or "").strip()
 
         start_minutes = self._parse_minutes(options["start"], default_minutes=28800)
         end_minutes = self._parse_minutes(options["end"], default_minutes=0)
@@ -62,22 +76,29 @@ class Command(BaseCommand):
         if start_minutes < end_minutes:
             start_minutes, end_minutes = end_minutes, start_minutes
 
+        timeout = float(options["timeout"])
+        retries = max(0, int(options["retries"]))
+
         try:
-            points = asyncio.run(
-                self._read_history(
+            points, failures = asyncio.run(
+                self._collect_history(
                     mac=mac,
+                    name_contains=name_contains,
                     start_minutes=start_minutes,
                     end_minutes=end_minutes,
-                    timeout=float(options["timeout"]),
+                    timeout=timeout,
+                    retries=retries,
                 )
             )
         except RuntimeError as exc:
             raise CommandError(f"Bluetooth history read failed: {exc}") from exc
 
         if not points:
-            raise CommandError("No historical records returned by the device.")
+            if failures:
+                raise CommandError(f"No historical records returned by device(s). Errors: {'; '.join(failures)}")
+            raise CommandError("No historical records returned by device(s).")
 
-        before_count = H5075HistoricalMeasurement.objects.filter(address=mac).count()
+        before_count = H5075HistoricalMeasurement.objects.count()
 
         H5075HistoricalMeasurement.objects.bulk_create(
             [
@@ -93,11 +114,13 @@ class Command(BaseCommand):
             ignore_conflicts=True,
         )
 
-        after_count = H5075HistoricalMeasurement.objects.filter(address=mac).count()
+        after_count = H5075HistoricalMeasurement.objects.count()
         saved = after_count - before_count
         skipped = len(points) - saved
 
         self.stderr.write(f"Saved {saved} historical record(s), skipped {skipped} duplicate(s)")
+        if failures:
+            self.stderr.write(f"Skipped {len(failures)} device(s) due to errors: {'; '.join(failures)}")
 
         if options["json"]:
             self.stdout.write(json.dumps([asdict(p) for p in points], indent=2))
@@ -109,6 +132,64 @@ class Command(BaseCommand):
                 f"temp={item.temperature_c:.1f}°C humidity={item.humidity_pct:.1f}%"
             )
 
+    @staticmethod
+    def _configure_ble_logging() -> None:
+        logging.getLogger("bleak.backends.bluezdbus.version").setLevel(logging.ERROR)
+
+    async def _collect_history(
+        self,
+        mac: str,
+        name_contains: str,
+        start_minutes: int,
+        end_minutes: int,
+        timeout: float,
+        retries: int,
+    ) -> tuple[list[HistoryPoint], list[str]]:
+        targets = [mac] if mac else await self._discover_targets(name_contains=name_contains, timeout=timeout)
+        if not targets:
+            return [], []
+
+        points: list[HistoryPoint] = []
+        failures: list[str] = []
+
+        for address in targets:
+            last_error: Exception | None = None
+            for _ in range(retries + 1):
+                try:
+                    device_points = await self._read_history(
+                        mac=address,
+                        start_minutes=start_minutes,
+                        end_minutes=end_minutes,
+                        timeout=timeout,
+                    )
+                    points.extend(device_points)
+                    last_error = None
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    await asyncio.sleep(0.4)
+
+            if last_error is not None:
+                failures.append(f"{address}: {last_error}")
+
+        points.sort(key=lambda item: (item.measured_at, item.address))
+        return points, failures
+
+    async def _discover_targets(self, name_contains: str, timeout: float) -> list[str]:
+        from bleak import BleakScanner
+
+        discovered = await BleakScanner.discover(timeout=timeout, return_adv=True)
+        targets: list[str] = []
+
+        for address, (device, advertisement) in discovered.items():
+            local_name = (advertisement.local_name or device.name or "").strip()
+            if name_contains and name_contains.lower() not in local_name.lower():
+                continue
+
+            targets.append(address.lower())
+
+        return sorted(set(targets))
+
     async def _read_history(self, mac: str, start_minutes: int, end_minutes: int, timeout: float) -> list[HistoryPoint]:
         from bleak import BleakClient
 
@@ -117,7 +198,12 @@ class Command(BaseCommand):
         records: list[HistoryPoint] = []
 
         async with BleakClient(mac, timeout=timeout) as client:
+            if not client.is_connected:
+                raise RuntimeError("Unable to connect")
+
             device_name = await self._safe_read_name(client)
+            command_notify_started = False
+            data_notify_started = False
 
             def on_command(_: object, data: bytearray) -> None:
                 if data[0:2] == self.RECORDS_TX_COMPLETED:
@@ -145,21 +231,34 @@ class Command(BaseCommand):
                         )
                     )
 
-            await client.start_notify(self.UUID_COMMAND, on_command)
-            await client.start_notify(self.UUID_DATA, on_data)
-            await client.write_gatt_char(
-                self.UUID_COMMAND,
-                self._build_history_command(start_minutes=start_minutes, end_minutes=end_minutes),
-                response=True,
-            )
+            try:
+                await client.start_notify(self.UUID_COMMAND, on_command)
+                command_notify_started = True
+                await client.start_notify(self.UUID_DATA, on_data)
+                data_notify_started = True
+                await client.write_gatt_char(
+                    self.UUID_COMMAND,
+                    self._build_history_command(start_minutes=start_minutes, end_minutes=end_minutes),
+                    response=True,
+                )
+            except Exception as exc:
+                raise RuntimeError(f"GATT setup failed: {exc}") from exc
 
             try:
                 await asyncio.wait_for(completion.wait(), timeout=timeout)
             except TimeoutError:
                 pass
             finally:
-                await client.stop_notify(self.UUID_DATA)
-                await client.stop_notify(self.UUID_COMMAND)
+                if client.is_connected and data_notify_started:
+                    try:
+                        await client.stop_notify(self.UUID_DATA)
+                    except Exception:
+                        pass
+                if client.is_connected and command_notify_started:
+                    try:
+                        await client.stop_notify(self.UUID_COMMAND)
+                    except Exception:
+                        pass
 
         records.sort(key=lambda item: item.measured_at)
         return records

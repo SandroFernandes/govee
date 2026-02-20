@@ -145,7 +145,19 @@ JSON output for all snapshot fields:
 python backend/manage.py read_h5075_dump --timeout 12 --json
 ```
 
-Read and import historical records stored on the H5075 device (up to 20 days):
+Read and import historical records stored on all nearby H5075 devices (up to 20 days):
+
+```bash
+python backend/manage.py read_h5075_history --start 480:00 --end 0:00
+```
+
+If connections are unstable, increase timeout and retries:
+
+```bash
+python backend/manage.py read_h5075_history --timeout 25 --retries 3
+```
+
+Target one specific sensor by MAC (optional):
 
 ```bash
 python backend/manage.py read_h5075_history --mac AA:BB:CC:DD:EE:FF --start 480:00 --end 0:00
