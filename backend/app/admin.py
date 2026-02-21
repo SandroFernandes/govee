@@ -49,5 +49,5 @@ class H5075HistorySyncStateAdmin(admin.ModelAdmin):
 
 @admin.register(H5075DeviceAlias)
 class H5075DeviceAliasAdmin(admin.ModelAdmin):
-    list_display = ("alias", "address", "updated_at")
-    search_fields = ("alias", "address")
+    list_display = ("display_name", "alias", "detected_name", "address", "updated_at")
+    search_fields = ("alias", "detected_name", "address")

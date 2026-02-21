@@ -119,6 +119,17 @@ class HistoryApiEndpointTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["points"][0]["name"], "Bedroom")
 
+    def test_devices_api_lists_known_devices(self) -> None:
+        H5075DeviceAlias.objects.create(address="aa:bb:cc:dd:ee:01", alias="Bedroom", detected_name="H5075_A")
+
+        response = self.client.get("/api/devices/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["devices"][0]["display_name"], "Bedroom")
+        self.assertEqual(payload["devices"][0]["detected_name"], "H5075_A")
+
 
 class H5075ParserTests(TestCase):
     def test_decode_temp_humidity_battery(self) -> None:
@@ -281,6 +292,15 @@ class ReadH5075CommandTests(TestCase):
         measurement = H5075Measurement.objects.first()
         assert measurement is not None
         self.assertEqual(measurement.name, "Living Room")
+
+    def test_command_auto_creates_device_alias_entry(self) -> None:
+        reading = self._reading("AA:AA:AA:AA:AA:09", -55)
+
+        with patch("app.management.commands.read_h5075.Command._scan", new=AsyncMock(return_value=[reading])):
+            call_command("read_h5075")
+
+        alias = H5075DeviceAlias.objects.get(address="aa:aa:aa:aa:aa:09")
+        self.assertEqual(alias.detected_name, "H5075")
 
 
 class ReadH5075HardwareCommandTests(TestCase):

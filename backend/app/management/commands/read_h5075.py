@@ -49,6 +49,7 @@ class Command(BaseCommand):
 
         readings.sort(key=lambda item: item.rssi if item.rssi is not None else -9999, reverse=True)
         selected = readings[:1] if options["strongest"] else readings
+        self._upsert_detected_names(selected)
         name_map = self._get_name_map([item.address for item in selected])
 
         to_save: list[H5075Measurement] = []
@@ -144,4 +145,20 @@ class Command(BaseCommand):
             return {}
 
         aliases = H5075DeviceAlias.objects.filter(address__in=normalized)
-        return {item.address.lower(): item.alias for item in aliases}
+        return {item.address.lower(): (item.alias or item.detected_name or item.address) for item in aliases}
+
+    @staticmethod
+    def _upsert_detected_names(readings: list[H5075Reading]) -> None:
+        for item in readings:
+            address = (item.address or "").strip().lower()
+            if not address:
+                continue
+
+            detected_name = (item.name or "").strip()
+            alias, _ = H5075DeviceAlias.objects.get_or_create(
+                address=address,
+                defaults={"detected_name": detected_name},
+            )
+            if alias.detected_name != detected_name:
+                alias.detected_name = detected_name
+                alias.save(update_fields=["detected_name", "updated_at"])

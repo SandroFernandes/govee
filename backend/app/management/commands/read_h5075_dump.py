@@ -40,6 +40,7 @@ class Command(BaseCommand):
             raise CommandError("No H5075 snapshot data found.")
 
         snapshots.sort(key=lambda item: item.rssi if item.rssi is not None else -9999, reverse=True)
+        self._upsert_detected_names(snapshots)
         name_map = self._get_name_map([item.address for item in snapshots])
 
         saved = 0
@@ -122,4 +123,20 @@ class Command(BaseCommand):
             return {}
 
         aliases = H5075DeviceAlias.objects.filter(address__in=normalized)
-        return {item.address.lower(): item.alias for item in aliases}
+        return {item.address.lower(): (item.alias or item.detected_name or item.address) for item in aliases}
+
+    @staticmethod
+    def _upsert_detected_names(snapshots: list[H5075AdvertisementData]) -> None:
+        for item in snapshots:
+            address = (item.address or "").strip().lower()
+            if not address:
+                continue
+
+            detected_name = (item.name or "").strip()
+            alias, _ = H5075DeviceAlias.objects.get_or_create(
+                address=address,
+                defaults={"detected_name": detected_name},
+            )
+            if alias.detected_name != detected_name:
+                alias.detected_name = detected_name
+                alias.save(update_fields=["detected_name", "updated_at"])

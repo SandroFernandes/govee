@@ -57,7 +57,8 @@ Dockerized Django backend environment with current stable runtime images.
 
 	- http://localhost:8000/admin/
 
-To assign human-friendly names (e.g., Bedroom, Living Room), create entries in `H5075 Device Aliases` (fields: BLE MAC `address` and `alias`).
+To assign human-friendly names (e.g., Bedroom, Living Room), use `H5075 Device Aliases` in admin.
+You do not need to guess MAC addresses: devices are auto-populated there after `read_h5075`, `read_h5075_dump`, or `read_h5075_history` runs.
 
 The frontend runs in a separate `frontend` service and hot-reloads from `./frontend`.
 
@@ -203,6 +204,12 @@ Chart API for frontend (historical series):
 
 ```bash
 GET /api/history/?address=AA:BB:CC:DD:EE:FF&hours=168&limit=2000
+```
+
+Known devices API (for alias UI / selection):
+
+```bash
+GET /api/devices/
 ```
 
 Query params:

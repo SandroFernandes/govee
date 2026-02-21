@@ -77,8 +77,24 @@ def history_values(request: object) -> JsonResponse:
     )
 
 
+def devices(request: object) -> JsonResponse:
+    rows = list(H5075DeviceAlias.objects.all().order_by("alias", "detected_name", "address"))
+    payload = [
+        {
+            "address": row.address,
+            "alias": row.alias,
+            "detected_name": row.detected_name,
+            "display_name": row.display_name,
+            "updated_at": row.updated_at.isoformat(),
+        }
+        for row in rows
+    ]
+    return JsonResponse({"count": len(payload), "devices": payload})
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health),
     path("api/history/", history_values),
+    path("api/devices/", devices),
 ]
