@@ -7,7 +7,7 @@ from django.http import HttpRequest
 from django.http import JsonResponse
 from django.urls import path
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 from django.middleware.csrf import get_token
 
@@ -26,6 +26,7 @@ def auth_session(request: HttpRequest) -> JsonResponse:
 
 
 @require_GET
+@ensure_csrf_cookie
 def auth_csrf(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"csrfToken": get_token(request)})
 

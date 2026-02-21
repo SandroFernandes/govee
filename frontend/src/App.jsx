@@ -108,7 +108,7 @@ export default function App() {
 
     async function loadAuthSession() {
       try {
-        const response = await fetch("/api/auth/session/");
+        const response = await fetch("/api/auth/session/", { credentials: "include" });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
@@ -255,12 +255,22 @@ export default function App() {
       return existing;
     }
 
-    const response = await fetch("/api/auth/csrf/");
+    const response = await fetch("/api/auth/csrf/", { credentials: "include" });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
+    const payload = await response.json();
+
     const token = readCookie("csrftoken");
+    if (token) {
+      return token;
+    }
+
+    if (payload?.csrfToken) {
+      return String(payload.csrfToken);
+    }
+
     if (!token) {
       throw new Error("missing-csrf-token");
     }
@@ -272,6 +282,7 @@ export default function App() {
       const csrfToken = await ensureCsrfToken();
       const response = await fetch("/api/auth/logout/", {
         method: "POST",
+        credentials: "include",
         headers: { "X-CSRFToken": csrfToken },
       });
 
@@ -300,6 +311,7 @@ export default function App() {
       const csrfToken = await ensureCsrfToken();
       const response = await fetch("/api/auth/login/", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           "X-CSRFToken": csrfToken,
