@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.sessions.models import Session
 
 from app.models import (
     H5075AdvertisementSnapshot,
@@ -7,6 +8,16 @@ from app.models import (
     H5075HistorySyncState,
     H5075Measurement,
 )
+
+
+class SessionModelAdmin(admin.ModelAdmin):
+    list_display = ("session_key", "expire_date")
+    list_filter = ("expire_date",)
+    search_fields = ("session_key",)
+
+
+if not admin.site.is_registered(Session):
+    admin.site.register(Session, SessionModelAdmin)
 
 
 @admin.register(H5075Measurement)
