@@ -443,29 +443,31 @@ export default function App() {
         )}
 
         {activeMenu === "login" && (
-          <Stack spacing={2} component="form" onSubmit={submitLogin} sx={{ maxWidth: 420 }}>
-            <Typography variant="h5">Login</Typography>
-            {authState.loggedIn ? (
-              <Typography>You are logged in as {authState.username}.</Typography>
-            ) : (
-              <>
-                <TextField
-                  label="Username"
-                  value={loginForm.username}
-                  onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
-                />
-                <TextField
-                  type="password"
-                  label="Password"
-                  value={loginForm.password}
-                  onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
-                />
-                <Button type="submit" variant="contained" aria-label="login-submit">
-                  Login
-                </Button>
-              </>
-            )}
-          </Stack>
+          <Box sx={{ minHeight: "calc(100vh - 112px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <Stack spacing={2} component="form" onSubmit={submitLogin} sx={{ width: "100%", maxWidth: 420 }}>
+              <Typography variant="h5">Login</Typography>
+              {authState.loggedIn ? (
+                <Typography>You are logged in as {authState.username}.</Typography>
+              ) : (
+                <>
+                  <TextField
+                    label="Username"
+                    value={loginForm.username}
+                    onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
+                  />
+                  <TextField
+                    type="password"
+                    label="Password"
+                    value={loginForm.password}
+                    onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+                  />
+                  <Button type="submit" variant="contained" aria-label="login-submit">
+                    Login
+                  </Button>
+                </>
+              )}
+            </Stack>
+          </Box>
         )}
 
         {activeMenu === "about" && (
