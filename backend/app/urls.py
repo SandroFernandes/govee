@@ -2,17 +2,59 @@ from datetime import timedelta
 import json
 
 from django.contrib import admin
+from django.contrib.auth import authenticate, login, logout
 from django.http import HttpRequest
 from django.http import JsonResponse
 from django.urls import path
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
+from django.middleware.csrf import get_token
 
 from app.models import H5075DeviceAlias, H5075HistoricalMeasurement
 
 
 def health(_: object) -> JsonResponse:
     return JsonResponse({"status": "ok"})
+
+
+@require_GET
+def auth_session(request: HttpRequest) -> JsonResponse:
+    if request.user.is_authenticated:
+        return JsonResponse({"logged_in": True, "username": request.user.get_username()})
+    return JsonResponse({"logged_in": False, "username": ""})
+
+
+@require_GET
+def auth_csrf(request: HttpRequest) -> JsonResponse:
+    return JsonResponse({"csrfToken": get_token(request)})
+
+
+@require_POST
+def auth_login(request: HttpRequest) -> JsonResponse:
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", ""))
+
+    if not username or not password:
+        return JsonResponse({"error": "'username' and 'password' are required."}, status=400)
+
+    user = authenticate(request, username=username, password=password)
+    if user is None:
+        return JsonResponse({"error": "Invalid credentials."}, status=401)
+
+    login(request, user)
+    return JsonResponse({"logged_in": True, "username": user.get_username()})
+
+
+@require_POST
+def auth_logout(request: HttpRequest) -> JsonResponse:
+    logout(request)
+    return JsonResponse({"logged_in": False, "username": ""})
 
 
 def history_values(request: object) -> JsonResponse:
@@ -129,6 +171,10 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health),
     path("api/health/", health),
+    path("api/auth/session/", auth_session),
+    path("api/auth/csrf/", auth_csrf),
+    path("api/auth/login/", auth_login),
+    path("api/auth/logout/", auth_logout),
     path("api/history/", history_values),
     path("api/devices/", devices),
 ]

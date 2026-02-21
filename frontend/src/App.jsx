@@ -50,6 +50,15 @@ const menuItems = [
   { key: "about", label: "About", icon: <AboutIcon /> },
 ];
 
+function readCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop().split(";").shift() || "";
+  }
+  return "";
+}
+
 export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -68,7 +77,7 @@ export default function App() {
     setSnack({ open: true, message });
   }
 
-  function handleMenuClick(key) {
+  async function handleMenuClick(key) {
     if (!authState.loggedIn && key !== "login") {
       setActiveMenu("login");
       setMobileOpen(false);
@@ -76,10 +85,7 @@ export default function App() {
     }
 
     if (key === "logout") {
-      setAuthState({ loggedIn: false, username: "" });
-      setLoginForm({ username: "", password: "" });
-      setActiveMenu("login");
-      showMessage("Logged out");
+      await performLogout();
     } else {
       setActiveMenu(key);
     }
@@ -96,6 +102,44 @@ export default function App() {
       setActiveMenu("login");
     }
   }, [authState.loggedIn, activeMenu]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAuthSession() {
+      try {
+        const response = await fetch("/api/auth/session/");
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!isMounted) {
+          return;
+        }
+
+        if (data.logged_in) {
+          setAuthState({ loggedIn: true, username: data.username || "" });
+          setActiveMenu((current) => (current === "login" ? "history" : current));
+        } else {
+          setAuthState({ loggedIn: false, username: "" });
+          setActiveMenu("login");
+        }
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+        setAuthState({ loggedIn: false, username: "" });
+        setActiveMenu("login");
+      }
+    }
+
+    loadAuthSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -205,7 +249,46 @@ export default function App() {
     }
   }
 
-  function submitLogin(event) {
+  async function ensureCsrfToken() {
+    const existing = readCookie("csrftoken");
+    if (existing) {
+      return existing;
+    }
+
+    const response = await fetch("/api/auth/csrf/");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const token = readCookie("csrftoken");
+    if (!token) {
+      throw new Error("missing-csrf-token");
+    }
+    return token;
+  }
+
+  async function performLogout() {
+    try {
+      const csrfToken = await ensureCsrfToken();
+      const response = await fetch("/api/auth/logout/", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      setAuthState({ loggedIn: false, username: "" });
+      setLoginForm({ username: "", password: "" });
+      setActiveMenu("login");
+      showMessage("Logged out");
+    } catch {
+      showMessage("Logout failed");
+    }
+  }
+
+  async function submitLogin(event) {
     event.preventDefault();
     const username = loginForm.username.trim();
     if (!username || !loginForm.password) {
@@ -213,10 +296,33 @@ export default function App() {
       return;
     }
 
-    setAuthState({ loggedIn: true, username });
-    setLoginForm({ username: "", password: "" });
-    showMessage(`Logged in as ${username}`);
-    setActiveMenu("history");
+    try {
+      const csrfToken = await ensureCsrfToken();
+      const response = await fetch("/api/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify({ username, password: loginForm.password }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          showMessage("Invalid username or password");
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAuthState({ loggedIn: Boolean(data.logged_in), username: data.username || "" });
+      setLoginForm({ username: "", password: "" });
+      showMessage(`Logged in as ${data.username || username}`);
+      setActiveMenu("history");
+    } catch {
+      showMessage("Login failed");
+    }
   }
 
   useEffect(() => {

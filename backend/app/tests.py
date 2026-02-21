@@ -5,6 +5,7 @@ from datetime import timedelta
 from io import StringIO
 from unittest.mock import AsyncMock, patch
 
+from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.test import Client, TestCase
 from django.utils import timezone
@@ -48,6 +49,56 @@ class AdminEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/admin/login/", response["Location"])
+
+
+class AuthApiEndpointTests(TestCase):
+    def setUp(self) -> None:
+        self.client = Client()
+        self.user_model = get_user_model()
+        self.user = self.user_model.objects.create_user(username="sandro", password="secret-123")
+
+    def test_auth_session_returns_logged_out_by_default(self) -> None:
+        response = self.client.get("/api/auth/session/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"logged_in": False, "username": ""})
+
+    def test_auth_login_logs_user_in(self) -> None:
+        response = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({"username": "sandro", "password": "secret-123"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["logged_in"], True)
+        self.assertEqual(response.json()["username"], "sandro")
+
+        session_response = self.client.get("/api/auth/session/")
+        self.assertEqual(session_response.status_code, 200)
+        self.assertEqual(session_response.json(), {"logged_in": True, "username": "sandro"})
+
+    def test_auth_login_rejects_invalid_credentials(self) -> None:
+        response = self.client.post(
+            "/api/auth/login/",
+            data=json.dumps({"username": "sandro", "password": "wrong"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("Invalid credentials", response.json()["error"])
+
+    def test_auth_logout_clears_session(self) -> None:
+        self.client.force_login(self.user)
+
+        response = self.client.post("/api/auth/logout/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"logged_in": False, "username": ""})
+
+        session_response = self.client.get("/api/auth/session/")
+        self.assertEqual(session_response.status_code, 200)
+        self.assertEqual(session_response.json(), {"logged_in": False, "username": ""})
 
 
 class HistoryApiEndpointTests(TestCase):
