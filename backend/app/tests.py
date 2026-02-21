@@ -32,6 +32,12 @@ class HealthEndpointTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
+    def test_api_health_returns_ok_payload(self) -> None:
+        response = self.client.get("/api/health/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
 
 class AdminEndpointTests(TestCase):
     def setUp(self) -> None:
@@ -129,6 +135,32 @@ class HistoryApiEndpointTests(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["devices"][0]["display_name"], "Bedroom")
         self.assertEqual(payload["devices"][0]["detected_name"], "H5075_A")
+
+    def test_devices_api_updates_alias(self) -> None:
+        H5075DeviceAlias.objects.create(address="aa:bb:cc:dd:ee:01", alias="", detected_name="H5075_A")
+
+        response = self.client.post(
+            "/api/devices/",
+            data=json.dumps({"address": "AA:BB:CC:DD:EE:01", "alias": "Living Room"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["display_name"], "Living Room")
+
+        refreshed = H5075DeviceAlias.objects.get(address="aa:bb:cc:dd:ee:01")
+        self.assertEqual(refreshed.alias, "Living Room")
+
+    def test_devices_api_rejects_missing_address(self) -> None:
+        response = self.client.post(
+            "/api/devices/",
+            data=json.dumps({"alias": "Kitchen"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("'address' is required", response.json()["error"])
 
 
 class H5075ParserTests(TestCase):

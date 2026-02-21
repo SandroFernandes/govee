@@ -212,6 +212,15 @@ Known devices API (for alias UI / selection):
 GET /api/devices/
 ```
 
+Update a device alias:
+
+```bash
+POST /api/devices/
+Content-Type: application/json
+
+{"address":"AA:BB:CC:DD:EE:FF","alias":"Bedroom"}
+```
+
 Query params:
 
 - `address` (optional): one device MAC

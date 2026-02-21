@@ -1,9 +1,74 @@
 import React from "react";
 import { useEffect, useState } from "react";
+import AboutIcon from "@mui/icons-material/InfoOutlined";
+import DevicesIcon from "@mui/icons-material/MemoryOutlined";
+import HistoryIcon from "@mui/icons-material/ShowChartOutlined";
+import LoginIcon from "@mui/icons-material/Login";
+import LogoutIcon from "@mui/icons-material/Logout";
+import MenuIcon from "@mui/icons-material/Menu";
+import {
+  AppBar,
+  Box,
+  Button,
+  CssBaseline,
+  Divider,
+  Drawer,
+  IconButton,
+  Input,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Snackbar,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Toolbar,
+  Typography,
+} from "@mui/material";
+
+const drawerWidth = 280;
+
+const menuItems = [
+  { key: "history", label: "Historical Data", icon: <HistoryIcon /> },
+  { key: "devices", label: "Device Names", icon: <DevicesIcon /> },
+  { key: "login", label: "Login", icon: <LoginIcon /> },
+  { key: "logout", label: "Logout", icon: <LogoutIcon /> },
+  { key: "about", label: "About", icon: <AboutIcon /> },
+];
 
 export default function App() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState("history");
   const [status, setStatus] = useState("checking...");
   const [historyState, setHistoryState] = useState({ loading: true, error: "", points: [] });
+  const [devicesState, setDevicesState] = useState({ loading: true, error: "", devices: [] });
+  const [aliasInputs, setAliasInputs] = useState({});
+  const [savingState, setSavingState] = useState({});
+  const [authState, setAuthState] = useState({ loggedIn: false, username: "" });
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [snack, setSnack] = useState({ open: false, message: "" });
+
+  function showMessage(message) {
+    setSnack({ open: true, message });
+  }
+
+  function handleMenuClick(key) {
+    if (key === "logout") {
+      setAuthState({ loggedIn: false, username: "" });
+      setLoginForm({ username: "", password: "" });
+      setActiveMenu("login");
+      showMessage("Logged out");
+    } else {
+      setActiveMenu(key);
+    }
+    setMobileOpen(false);
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -34,6 +99,98 @@ export default function App() {
       clearInterval(timerId);
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDevices() {
+      try {
+        const response = await fetch("/api/devices/");
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const devices = Array.isArray(data.devices) ? data.devices : [];
+        if (isMounted) {
+          setDevicesState({ loading: false, error: "", devices });
+          setAliasInputs((previous) => {
+            const next = { ...previous };
+            for (const device of devices) {
+              if (typeof next[device.address] !== "string") {
+                next[device.address] = device.alias || "";
+              }
+            }
+            return next;
+          });
+        }
+      } catch {
+        if (isMounted) {
+          setDevicesState({ loading: false, error: "devices-unreachable", devices: [] });
+        }
+      }
+    }
+
+    loadDevices();
+    const timerId = setInterval(loadDevices, 60000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timerId);
+    };
+  }, []);
+
+  async function saveAlias(address) {
+    const alias = (aliasInputs[address] || "").trim();
+    setSavingState((previous) => ({ ...previous, [address]: "saving" }));
+
+    try {
+      const response = await fetch("/api/devices/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address, alias }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const updated = await response.json();
+      setDevicesState((previous) => ({
+        ...previous,
+        devices: previous.devices.map((device) =>
+          device.address === address
+            ? {
+                ...device,
+                alias: updated.alias,
+                detected_name: updated.detected_name,
+                display_name: updated.display_name,
+                updated_at: updated.updated_at,
+              }
+            : device
+        ),
+      }));
+      setSavingState((previous) => ({ ...previous, [address]: "saved" }));
+      showMessage("Alias saved");
+    } catch {
+      setSavingState((previous) => ({ ...previous, [address]: "error" }));
+      showMessage("Alias save failed");
+    }
+  }
+
+  function submitLogin(event) {
+    event.preventDefault();
+    const username = loginForm.username.trim();
+    if (!username || !loginForm.password) {
+      showMessage("Enter username and password");
+      return;
+    }
+
+    setAuthState({ loggedIn: true, username });
+    setLoginForm({ username: "", password: "" });
+    showMessage(`Logged in as ${username}`);
+    setActiveMenu("history");
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -71,26 +228,173 @@ export default function App() {
 
   const chart = buildChart(historyState.points);
 
+  const drawer = (
+    <Box>
+      <Toolbar>
+        <Typography variant="h6" noWrap component="div">
+          Govee Dashboard
+        </Typography>
+      </Toolbar>
+      <Divider />
+      <List>
+        {menuItems.map((item) => (
+          <ListItemButton key={item.key} selected={activeMenu === item.key} onClick={() => handleMenuClick(item.key)}>
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.label} />
+          </ListItemButton>
+        ))}
+      </List>
+    </Box>
+  );
+
   return (
-    <main>
-      <h1>Govee Frontend</h1>
-      <p>Django backend health: {status}</p>
-      <h2>History (last 7 days)</h2>
-      {historyState.loading && <p>Loading history…</p>}
-      {!historyState.loading && historyState.error && <p>History: {historyState.error}</p>}
-      {!historyState.loading && !historyState.error && historyState.points.length === 0 && <p>No history data yet.</p>}
-      {!historyState.loading && !historyState.error && historyState.points.length > 0 && (
-        <section>
-          <p>Points: {historyState.points.length}</p>
-          <svg viewBox="0 0 700 240" role="img" aria-label="Temperature and humidity history chart">
-            <polyline points={chart.temperatureLine} fill="none" stroke="#cc2936" strokeWidth="2" />
-            <polyline points={chart.humidityLine} fill="none" stroke="#1f77b4" strokeWidth="2" />
-          </svg>
-          <p>Temp range: {chart.tempMin.toFixed(1)}°C → {chart.tempMax.toFixed(1)}°C</p>
-          <p>Humidity range: {chart.humidityMin.toFixed(1)}% → {chart.humidityMax.toFixed(1)}%</p>
-        </section>
-      )}
-    </main>
+    <Box sx={{ display: "flex" }}>
+      <CssBaseline />
+      <AppBar position="fixed" sx={{ width: { sm: `calc(100% - ${drawerWidth}px)` }, ml: { sm: `${drawerWidth}px` } }}>
+        <Toolbar>
+          <IconButton color="inherit" edge="start" onClick={() => setMobileOpen((open) => !open)} sx={{ mr: 2, display: { sm: "none" } }}>
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
+            Govee Frontend
+          </Typography>
+          <Typography variant="body2">Django backend health: {status}</Typography>
+        </Toolbar>
+      </AppBar>
+
+      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{ display: { xs: "block", sm: "none" }, "& .MuiDrawer-paper": { boxSizing: "border-box", width: drawerWidth } }}
+        >
+          {drawer}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{ display: { xs: "none", sm: "block" }, "& .MuiDrawer-paper": { boxSizing: "border-box", width: drawerWidth } }}
+          open
+        >
+          {drawer}
+        </Drawer>
+      </Box>
+
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
+        <Toolbar />
+
+        {activeMenu === "history" && (
+          <Stack spacing={2}>
+            <Typography variant="h5">Historical Data</Typography>
+            {historyState.loading && <Typography>Loading history…</Typography>}
+            {!historyState.loading && historyState.error && <Typography>History: {historyState.error}</Typography>}
+            {!historyState.loading && !historyState.error && historyState.points.length === 0 && <Typography>No history data yet.</Typography>}
+            {!historyState.loading && !historyState.error && historyState.points.length > 0 && (
+              <Paper sx={{ p: 2 }}>
+                <Typography>Points: {historyState.points.length}</Typography>
+                <Box sx={{ mt: 1 }}>
+                  <svg viewBox="0 0 700 240" role="img" aria-label="Temperature and humidity history chart">
+                    <polyline points={chart.temperatureLine} fill="none" stroke="#cc2936" strokeWidth="2" />
+                    <polyline points={chart.humidityLine} fill="none" stroke="#1f77b4" strokeWidth="2" />
+                  </svg>
+                </Box>
+                <Typography>Temp range: {chart.tempMin.toFixed(1)}°C → {chart.tempMax.toFixed(1)}°C</Typography>
+                <Typography>Humidity range: {chart.humidityMin.toFixed(1)}% → {chart.humidityMax.toFixed(1)}%</Typography>
+              </Paper>
+            )}
+          </Stack>
+        )}
+
+        {activeMenu === "devices" && (
+          <Stack spacing={2}>
+            <Typography variant="h5">Device Names</Typography>
+            {devicesState.loading && <Typography>Loading devices…</Typography>}
+            {!devicesState.loading && devicesState.error && <Typography>Devices: {devicesState.error}</Typography>}
+            {!devicesState.loading && !devicesState.error && devicesState.devices.length === 0 && (
+              <Typography>No devices yet. Run a read command first.</Typography>
+            )}
+            {!devicesState.loading && !devicesState.error && devicesState.devices.length > 0 && (
+              <Paper>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>MAC</TableCell>
+                      <TableCell>Alias</TableCell>
+                      <TableCell>Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {devicesState.devices.map((device) => (
+                      <TableRow key={device.address}>
+                        <TableCell>{device.display_name || device.detected_name || device.address}</TableCell>
+                        <TableCell>{device.address}</TableCell>
+                        <TableCell>
+                          <Input
+                            inputProps={{ "aria-label": `alias-${device.address}` }}
+                            value={aliasInputs[device.address] ?? ""}
+                            onChange={(event) =>
+                              setAliasInputs((previous) => ({
+                                ...previous,
+                                [device.address]: event.target.value,
+                              }))
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button size="small" variant="contained" onClick={() => saveAlias(device.address)}>
+                            Save
+                          </Button>
+                          {savingState[device.address] === "saving" && <Typography component="span"> saving…</Typography>}
+                          {savingState[device.address] === "saved" && <Typography component="span"> saved</Typography>}
+                          {savingState[device.address] === "error" && <Typography component="span"> error</Typography>}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Paper>
+            )}
+          </Stack>
+        )}
+
+        {activeMenu === "login" && (
+          <Stack spacing={2} component="form" onSubmit={submitLogin} sx={{ maxWidth: 420 }}>
+            <Typography variant="h5">Login</Typography>
+            {authState.loggedIn ? (
+              <Typography>You are logged in as {authState.username}.</Typography>
+            ) : (
+              <>
+                <TextField
+                  label="Username"
+                  value={loginForm.username}
+                  onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
+                />
+                <TextField
+                  type="password"
+                  label="Password"
+                  value={loginForm.password}
+                  onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+                />
+                <Button type="submit" variant="contained" aria-label="login-submit">
+                  Login
+                </Button>
+              </>
+            )}
+          </Stack>
+        )}
+
+        {activeMenu === "about" && (
+          <Stack spacing={1}>
+            <Typography variant="h5">About</Typography>
+            <Typography>Govee dashboard for historical temperature and humidity data.</Typography>
+            <Typography>Use the Device Names section to assign human-friendly names.</Typography>
+          </Stack>
+        )}
+      </Box>
+      <Snackbar open={snack.open} autoHideDuration={2500} onClose={() => setSnack({ open: false, message: "" })} message={snack.message} />
+    </Box>
   );
 }
 
