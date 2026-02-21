@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe("App", () => {
-  it("renders drawer menu and history section by default", async () => {
+  it("shows login by default and disables non-login menu when logged out", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url, options) => {
       if (String(url).includes("/api/health/")) {
         return {
@@ -59,22 +59,19 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "Historical Data" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Device Names" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Login" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "About" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Login" })).not.toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Historical Data" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Device Names" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Logout" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "About" })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByLabelText("theme-mode-system")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByLabelText("backend-status-ok")).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(screen.getByText("Points: 2")).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole("img", { name: "Temperature and humidity history chart" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
   });
 
   it("cycles theme mode icon from system to light to dark", async () => {
@@ -110,7 +107,7 @@ describe("App", () => {
     });
   });
 
-  it("shows history error when history request fails", async () => {
+  it("keeps user on login when logged out and clicking other menu items", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       if (String(url).includes("/api/health/")) {
         return {
@@ -126,14 +123,20 @@ describe("App", () => {
         };
       }
 
-      throw new Error("history down");
+      if (String(url).includes("/api/history/")) {
+        return {
+          ok: true,
+          json: async () => ({ points: [] }),
+        };
+      }
+
+      throw new Error("unexpected request");
     });
 
     render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Historical Data" }));
 
-    await waitFor(() => {
-      expect(screen.getByText("History: history-unreachable")).toBeInTheDocument();
-    });
+    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
   });
 
   it("switches to device names section from drawer", async () => {
@@ -164,6 +167,10 @@ describe("App", () => {
     });
 
     render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
+    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "sandro" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByLabelText("login-submit"));
     fireEvent.click(screen.getByRole("button", { name: "Device Names" }));
 
     await waitFor(() => {
@@ -221,6 +228,10 @@ describe("App", () => {
     });
 
     render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
+    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "sandro" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByLabelText("login-submit"));
   fireEvent.click(screen.getByRole("button", { name: "Device Names" }));
 
     const input = await screen.findByRole("textbox", { name: "alias-aa:bb:cc:dd:ee:01" });
@@ -257,10 +268,18 @@ describe("App", () => {
       expect(screen.getByText("Logged in as sandro")).toBeInTheDocument();
     });
 
+    expect(screen.getByRole("button", { name: "Historical Data" })).not.toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Device Names" })).not.toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "About" })).not.toHaveAttribute("aria-disabled", "true");
+
     fireEvent.click(screen.getByRole("button", { name: "Logout" }));
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
     });
+
+    expect(screen.getByRole("button", { name: "Historical Data" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "Device Names" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "About" })).toHaveAttribute("aria-disabled", "true");
   });
 });

@@ -69,6 +69,12 @@ export default function App() {
   }
 
   function handleMenuClick(key) {
+    if (!authState.loggedIn && key !== "login") {
+      setActiveMenu("login");
+      setMobileOpen(false);
+      return;
+    }
+
     if (key === "logout") {
       setAuthState({ loggedIn: false, username: "" });
       setLoginForm({ username: "", password: "" });
@@ -84,6 +90,12 @@ export default function App() {
     setDrawerOpen((open) => !open);
     setMobileOpen((open) => !open);
   }
+
+  useEffect(() => {
+    if (!authState.loggedIn && activeMenu !== "login") {
+      setActiveMenu("login");
+    }
+  }, [authState.loggedIn, activeMenu]);
 
   useEffect(() => {
     let isMounted = true;
@@ -272,10 +284,13 @@ export default function App() {
       <Toolbar>{drawerOpen && <Typography variant="h6">Govee Dashboard</Typography>}</Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item) => (
+        {menuItems.map((item) => {
+          const isEnabled = authState.loggedIn || item.key === "login";
+          return (
           <ListItemButton
             key={item.key}
             aria-label={item.label}
+            disabled={!isEnabled}
             selected={activeMenu === item.key}
             onClick={() => handleMenuClick(item.key)}
             sx={{ minHeight: 48, justifyContent: drawerOpen ? "initial" : "center", px: 2.5 }}
@@ -283,7 +298,8 @@ export default function App() {
             <ListItemIcon sx={{ minWidth: 0, mr: drawerOpen ? 2 : "auto", justifyContent: "center" }}>{item.icon}</ListItemIcon>
             <ListItemText primary={item.label} sx={{ opacity: drawerOpen ? 1 : 0 }} />
           </ListItemButton>
-        ))}
+          );
+        })}
       </List>
     </Box>
   );
