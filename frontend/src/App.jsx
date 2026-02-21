@@ -1,6 +1,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import AboutIcon from "@mui/icons-material/InfoOutlined";
+import CircleIcon from "@mui/icons-material/Circle";
 import DevicesIcon from "@mui/icons-material/MemoryOutlined";
 import HistoryIcon from "@mui/icons-material/ShowChartOutlined";
 import LoginIcon from "@mui/icons-material/Login";
@@ -33,6 +34,7 @@ import {
 } from "@mui/material";
 
 const drawerWidth = 280;
+const drawerCollapsedWidth = 72;
 
 const menuItems = [
   { key: "history", label: "Historical Data", icon: <HistoryIcon /> },
@@ -44,6 +46,7 @@ const menuItems = [
 
 export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("history");
   const [status, setStatus] = useState("checking...");
   const [historyState, setHistoryState] = useState({ loading: true, error: "", points: [] });
@@ -68,6 +71,11 @@ export default function App() {
       setActiveMenu(key);
     }
     setMobileOpen(false);
+  }
+
+  function toggleDrawer() {
+    setDrawerOpen((open) => !open);
+    setMobileOpen((open) => !open);
   }
 
   useEffect(() => {
@@ -227,20 +235,24 @@ export default function App() {
   }, []);
 
   const chart = buildChart(historyState.points);
+  const healthColor = status === "ok" ? "success.main" : status === "unreachable" ? "error.main" : "warning.main";
+  const healthAria = status === "ok" ? "backend-status-ok" : status === "unreachable" ? "backend-status-unreachable" : "backend-status-checking";
 
   const drawer = (
     <Box>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div">
-          Govee Dashboard
-        </Typography>
-      </Toolbar>
+      <Toolbar>{drawerOpen && <Typography variant="h6">Govee Dashboard</Typography>}</Toolbar>
       <Divider />
       <List>
         {menuItems.map((item) => (
-          <ListItemButton key={item.key} selected={activeMenu === item.key} onClick={() => handleMenuClick(item.key)}>
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
+          <ListItemButton
+            key={item.key}
+            aria-label={item.label}
+            selected={activeMenu === item.key}
+            onClick={() => handleMenuClick(item.key)}
+            sx={{ minHeight: 48, justifyContent: drawerOpen ? "initial" : "center", px: 2.5 }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: drawerOpen ? 2 : "auto", justifyContent: "center" }}>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.label} sx={{ opacity: drawerOpen ? 1 : 0 }} />
           </ListItemButton>
         ))}
       </List>
@@ -250,19 +262,25 @@ export default function App() {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ width: { sm: `calc(100% - ${drawerWidth}px)` }, ml: { sm: `${drawerWidth}px` } }}>
+      <AppBar
+        position="fixed"
+        sx={{
+          width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` },
+          ml: { sm: `${drawerOpen ? drawerWidth : drawerCollapsedWidth}px` },
+        }}
+      >
         <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={() => setMobileOpen((open) => !open)} sx={{ mr: 2, display: { sm: "none" } }}>
+          <IconButton color="inherit" edge="start" onClick={toggleDrawer} sx={{ mr: 2 }}>
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
             Govee Frontend
           </Typography>
-          <Typography variant="body2">Django backend health: {status}</Typography>
+          <CircleIcon fontSize="small" sx={{ color: healthColor }} aria-label={healthAria} />
         </Toolbar>
       </AppBar>
 
-      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
+      <Box component="nav" sx={{ width: { sm: drawerOpen ? drawerWidth : drawerCollapsedWidth }, flexShrink: { sm: 0 } }}>
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -274,14 +292,26 @@ export default function App() {
         </Drawer>
         <Drawer
           variant="permanent"
-          sx={{ display: { xs: "none", sm: "block" }, "& .MuiDrawer-paper": { boxSizing: "border-box", width: drawerWidth } }}
+          sx={{
+            display: { xs: "none", sm: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerOpen ? drawerWidth : drawerCollapsedWidth,
+              overflowX: "hidden",
+              transition: (theme) =>
+                theme.transitions.create("width", {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.enteringScreen,
+                }),
+            },
+          }}
           open
         >
           {drawer}
         </Drawer>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` } }}>
         <Toolbar />
 
         {activeMenu === "history" && (

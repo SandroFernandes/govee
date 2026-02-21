@@ -66,7 +66,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "About" })).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText("Django backend health: ok")).toBeInTheDocument();
+      expect(screen.getByLabelText("backend-status-ok")).toBeInTheDocument();
     });
 
     await waitFor(() => {
@@ -82,7 +82,7 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText("Django backend health: unreachable")).toBeInTheDocument();
+      expect(screen.getByLabelText("backend-status-unreachable")).toBeInTheDocument();
     });
   });
 
