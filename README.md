@@ -76,6 +76,7 @@ Important variables:
 - `DJANGO_SECRET_KEY`
 - `DJANGO_DEBUG`
 - `DJANGO_ALLOWED_HOSTS`
+- `DJANGO_CSRF_TRUSTED_ORIGINS`
 - `SQLITE_PATH`
 - `GOVEE_HISTORY_SYNC_DAYS` (default `4`)
 - `GOVEE_HISTORY_CHECK_INTERVAL_SECONDS` (default `43200`, every 12h check)
@@ -83,6 +84,7 @@ Important variables:
 - `GOVEE_HISTORY_RETRIES` (default `3`)
 
 For Docker dev with Vite proxy, ensure `DJANGO_ALLOWED_HOSTS` includes `backend` (and/or `govee-backend`).
+For Django session auth from frontend dev server (`localhost:5173`), ensure `DJANGO_CSRF_TRUSTED_ORIGINS` includes your frontend origin(s).
 
 ## Useful commands
 
@@ -219,6 +221,15 @@ POST /api/devices/
 Content-Type: application/json
 
 {"address":"AA:BB:CC:DD:EE:FF","alias":"Bedroom"}
+
+Authentication/session APIs used by the frontend login:
+
+```bash
+GET /api/auth/session/
+GET /api/auth/csrf/
+POST /api/auth/login/
+POST /api/auth/logout/
+```
 ```
 
 Query params:
