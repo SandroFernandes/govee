@@ -327,7 +327,9 @@ export default function App() {
                 {themeIcon}
               </IconButton>
             </Tooltip>
-            <CircleIcon fontSize="small" sx={{ color: healthColor }} aria-label={healthAria} />
+            <Tooltip title={`Backend: ${status}`}>
+              <CircleIcon fontSize="small" sx={{ color: healthColor }} aria-label={healthAria} />
+            </Tooltip>
           </Toolbar>
         </AppBar>
 
