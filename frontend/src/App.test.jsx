@@ -64,6 +64,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Login" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "About" })).toBeInTheDocument();
+    expect(screen.getByLabelText("theme-mode-system")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByLabelText("backend-status-ok")).toBeInTheDocument();
@@ -74,6 +75,29 @@ describe("App", () => {
     });
 
     expect(screen.getByRole("img", { name: "Temperature and humidity history chart" })).toBeInTheDocument();
+  });
+
+  it("cycles theme mode icon from system to light to dark", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (String(url).includes("/api/health/")) {
+        return { ok: true, json: async () => ({ status: "ok" }) };
+      }
+      if (String(url).includes("/api/history/")) {
+        return { ok: true, json: async () => ({ points: [] }) };
+      }
+      if (String(url).includes("/api/devices/")) {
+        return { ok: true, json: async () => ({ devices: [] }) };
+      }
+      throw new Error("unexpected request");
+    });
+
+    render(<App />);
+
+    const toggle = screen.getByLabelText("theme-mode-system");
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("theme-mode-light")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("theme-mode-light"));
+    expect(screen.getByLabelText("theme-mode-dark")).toBeInTheDocument();
   });
 
   it("shows unreachable status when API request fails", async () => {

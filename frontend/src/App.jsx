@@ -1,9 +1,12 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import AboutIcon from "@mui/icons-material/InfoOutlined";
+import AutoModeIcon from "@mui/icons-material/BrightnessAuto";
 import CircleIcon from "@mui/icons-material/Circle";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
 import DevicesIcon from "@mui/icons-material/MemoryOutlined";
 import HistoryIcon from "@mui/icons-material/ShowChartOutlined";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -29,9 +32,12 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Toolbar,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 const drawerWidth = 280;
 const drawerCollapsedWidth = 72;
@@ -49,6 +55,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("history");
   const [status, setStatus] = useState("checking...");
+  const [themeMode, setThemeMode] = useState("system");
   const [historyState, setHistoryState] = useState({ loading: true, error: "", points: [] });
   const [devicesState, setDevicesState] = useState({ loading: true, error: "", devices: [] });
   const [aliasInputs, setAliasInputs] = useState({});
@@ -237,6 +244,28 @@ export default function App() {
   const chart = buildChart(historyState.points);
   const healthColor = status === "ok" ? "success.main" : status === "unreachable" ? "error.main" : "warning.main";
   const healthAria = status === "ok" ? "backend-status-ok" : status === "unreachable" ? "backend-status-unreachable" : "backend-status-checking";
+  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
+  const effectiveThemeMode = themeMode === "system" ? (prefersDarkMode ? "dark" : "light") : themeMode;
+  const theme = createTheme({
+    palette: {
+      mode: effectiveThemeMode,
+    },
+  });
+
+  function cycleThemeMode() {
+    setThemeMode((current) => {
+      if (current === "system") {
+        return "light";
+      }
+      if (current === "light") {
+        return "dark";
+      }
+      return "system";
+    });
+  }
+
+  const themeIcon = themeMode === "system" ? <AutoModeIcon fontSize="small" /> : themeMode === "light" ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />;
+  const themeAriaLabel = `theme-mode-${themeMode}`;
 
   const drawer = (
     <Box>
@@ -260,27 +289,33 @@ export default function App() {
   );
 
   return (
-    <Box sx={{ display: "flex" }}>
-      <CssBaseline />
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` },
-          ml: { sm: `${drawerOpen ? drawerWidth : drawerCollapsedWidth}px` },
-        }}
-      >
-        <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={toggleDrawer} sx={{ mr: 2 }}>
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-            Govee Frontend
-          </Typography>
-          <CircleIcon fontSize="small" sx={{ color: healthColor }} aria-label={healthAria} />
-        </Toolbar>
-      </AppBar>
+    <ThemeProvider theme={theme}>
+      <Box sx={{ display: "flex" }}>
+        <CssBaseline />
+        <AppBar
+          position="fixed"
+          sx={{
+            width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` },
+            ml: { sm: `${drawerOpen ? drawerWidth : drawerCollapsedWidth}px` },
+          }}
+        >
+          <Toolbar>
+            <IconButton color="inherit" edge="start" onClick={toggleDrawer} sx={{ mr: 2 }}>
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
+              Govee Frontend
+            </Typography>
+            <Tooltip title={`Theme: ${themeMode}`}>
+              <IconButton color="inherit" onClick={cycleThemeMode} aria-label={themeAriaLabel} sx={{ mr: 1 }}>
+                {themeIcon}
+              </IconButton>
+            </Tooltip>
+            <CircleIcon fontSize="small" sx={{ color: healthColor }} aria-label={healthAria} />
+          </Toolbar>
+        </AppBar>
 
-      <Box component="nav" sx={{ width: { sm: drawerOpen ? drawerWidth : drawerCollapsedWidth }, flexShrink: { sm: 0 } }}>
+        <Box component="nav" sx={{ width: { sm: drawerOpen ? drawerWidth : drawerCollapsedWidth }, flexShrink: { sm: 0 } }}>
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -309,9 +344,9 @@ export default function App() {
         >
           {drawer}
         </Drawer>
-      </Box>
+        </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` } }}>
+        <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` } }}>
         <Toolbar />
 
         {activeMenu === "history" && (
@@ -422,9 +457,10 @@ export default function App() {
             <Typography>Use the Device Names section to assign human-friendly names.</Typography>
           </Stack>
         )}
+        </Box>
+        <Snackbar open={snack.open} autoHideDuration={2500} onClose={() => setSnack({ open: false, message: "" })} message={snack.message} />
       </Box>
-      <Snackbar open={snack.open} autoHideDuration={2500} onClose={() => setSnack({ open: false, message: "" })} message={snack.message} />
-    </Box>
+    </ThemeProvider>
   );
 }
 
