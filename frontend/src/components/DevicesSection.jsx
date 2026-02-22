@@ -16,7 +16,6 @@ export default function DevicesSection({ devicesState, aliasInputs, setAliasInpu
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
-                <TableCell>MAC</TableCell>
                 <TableCell>Alias</TableCell>
                 <TableCell>Action</TableCell>
               </TableRow>
@@ -25,7 +24,6 @@ export default function DevicesSection({ devicesState, aliasInputs, setAliasInpu
               {devicesState.devices.map((device) => (
                 <TableRow key={device.address}>
                   <TableCell>{device.display_name || device.detected_name || device.address}</TableCell>
-                  <TableCell>{device.address}</TableCell>
                   <TableCell>
                     <Input
                       inputProps={{ "aria-label": `alias-${device.address}` }}
