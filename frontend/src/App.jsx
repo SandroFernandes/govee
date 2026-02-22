@@ -10,6 +10,8 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
   AppBar,
   Box,
@@ -19,6 +21,7 @@ import {
   Drawer,
   IconButton,
   Input,
+  InputAdornment,
   List,
   ListItemButton,
   ListItemIcon,
@@ -71,6 +74,7 @@ export default function App() {
   const [savingState, setSavingState] = useState({});
   const [authState, setAuthState] = useState({ loggedIn: false, username: "" });
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [snack, setSnack] = useState({ open: false, message: "" });
 
   function showMessage(message) {
@@ -292,6 +296,7 @@ export default function App() {
 
       setAuthState({ loggedIn: false, username: "" });
       setLoginForm({ username: "", password: "" });
+      setShowPassword(false);
       setActiveMenu("login");
       showMessage("Logged out");
     } catch {
@@ -330,6 +335,7 @@ export default function App() {
       const data = await response.json();
       setAuthState({ loggedIn: Boolean(data.logged_in), username: data.username || "" });
       setLoginForm({ username: "", password: "" });
+      setShowPassword(false);
       showMessage(`Logged in as ${data.username || username}`);
       setActiveMenu("history");
     } catch {
@@ -396,6 +402,24 @@ export default function App() {
 
   const themeIcon = themeMode === "system" ? <AutoModeIcon fontSize="small" /> : themeMode === "light" ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />;
   const themeAriaLabel = `theme-mode-${themeMode}`;
+  const loginFieldSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "primary.main",
+      color: "common.white",
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "primary.light",
+    },
+    "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
+      borderColor: "primary.light",
+    },
+    "& .MuiInputLabel-root": {
+      color: "text.secondary",
+    },
+    "& .MuiSvgIcon-root": {
+      color: "common.white",
+    },
+  };
 
   const drawer = (
     <Box>
@@ -572,12 +596,40 @@ export default function App() {
                     label="Username"
                     value={loginForm.username}
                     onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
+                    sx={loginFieldSx}
                   />
                   <TextField
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     label="Password"
                     value={loginForm.password}
                     onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+                    sx={loginFieldSx}
+                    InputProps={{
+                      sx: {
+                        "& .MuiInputAdornment-root": {
+                          backgroundColor: "primary.main",
+                        },
+                        "& .MuiIconButton-root": {
+                          color: "common.white",
+                          backgroundColor: "primary.main",
+                          borderRadius: 0,
+                          "&:hover": {
+                            backgroundColor: "primary.main",
+                          },
+                        },
+                      },
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            edge="end"
+                            aria-label={showPassword ? "hide-password" : "show-password"}
+                            onClick={() => setShowPassword((current) => !current)}
+                          >
+                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                   <Button type="submit" variant="contained" aria-label="login-submit">
                     Login
