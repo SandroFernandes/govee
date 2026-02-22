@@ -1,57 +1,24 @@
 import React from "react";
 import { useEffect, useState } from "react";
-import AboutIcon from "@mui/icons-material/InfoOutlined";
 import AutoModeIcon from "@mui/icons-material/BrightnessAuto";
-import CircleIcon from "@mui/icons-material/Circle";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
-import DevicesIcon from "@mui/icons-material/MemoryOutlined";
-import HistoryIcon from "@mui/icons-material/ShowChartOutlined";
 import LightModeIcon from "@mui/icons-material/LightMode";
-import LoginIcon from "@mui/icons-material/Login";
-import LogoutIcon from "@mui/icons-material/Logout";
-import MenuIcon from "@mui/icons-material/Menu";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
-  AppBar,
   Box,
-  Button,
   CssBaseline,
-  Divider,
-  Drawer,
-  IconButton,
-  Input,
-  InputAdornment,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Paper,
   Snackbar,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
   Toolbar,
-  Typography,
   useMediaQuery,
 } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-
-const drawerWidth = 280;
-const drawerCollapsedWidth = 72;
-
-const menuItems = [
-  { key: "history", label: "Historical Data", icon: <HistoryIcon /> },
-  { key: "devices", label: "Device Names", icon: <DevicesIcon /> },
-  { key: "login", label: "Login", icon: <LoginIcon /> },
-  { key: "logout", label: "Logout", icon: <LogoutIcon /> },
-  { key: "about", label: "About", icon: <AboutIcon /> },
-];
+import AboutSection from "./components/AboutSection";
+import AppDrawer from "./components/AppDrawer";
+import AppHeader from "./components/AppHeader";
+import DevicesSection from "./components/DevicesSection";
+import HistorySection from "./components/HistorySection";
+import LoginSection from "./components/LoginSection";
+import { drawerCollapsedWidth, drawerWidth, menuItems } from "./constants/menuItems";
+import { buildChart } from "./utils/chart";
 
 function readCookie(name) {
   const value = `; ${document.cookie}`;
@@ -421,293 +388,67 @@ export default function App() {
     },
   };
 
-  const drawer = (
-    <Box>
-      <Toolbar>{drawerOpen && <Typography variant="h6">Govee Dashboard</Typography>}</Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => {
-          const isEnabled = authState.loggedIn || item.key === "login";
-          return (
-          <ListItemButton
-            key={item.key}
-            aria-label={item.label}
-            disabled={!isEnabled}
-            selected={activeMenu === item.key}
-            onClick={() => handleMenuClick(item.key)}
-            sx={{ minHeight: 48, justifyContent: drawerOpen ? "initial" : "center", px: 2.5 }}
-          >
-            <ListItemIcon sx={{ minWidth: 0, mr: drawerOpen ? 2 : "auto", justifyContent: "center" }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} sx={{ opacity: drawerOpen ? 1 : 0 }} />
-          </ListItemButton>
-          );
-        })}
-      </List>
-    </Box>
-  );
-
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ display: "flex" }}>
         <CssBaseline />
-        <AppBar
-          position="fixed"
-          sx={{
-            width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` },
-            ml: { sm: `${drawerOpen ? drawerWidth : drawerCollapsedWidth}px` },
-          }}
-        >
-          <Toolbar>
-            <IconButton color="inherit" edge="start" onClick={toggleDrawer} sx={{ mr: 2 }}>
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-              Govee Frontend
-            </Typography>
-            <Tooltip title={`Theme: ${themeMode}`}>
-              <IconButton color="inherit" onClick={cycleThemeMode} aria-label={themeAriaLabel} sx={{ mr: 1 }}>
-                {themeIcon}
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={`Backend: ${status}`}>
-              <CircleIcon fontSize="small" sx={{ color: healthColor }} aria-label={healthAria} />
-            </Tooltip>
-          </Toolbar>
-        </AppBar>
+        <AppHeader
+          drawerOpen={drawerOpen}
+          drawerWidth={drawerWidth}
+          drawerCollapsedWidth={drawerCollapsedWidth}
+          toggleDrawer={toggleDrawer}
+          themeMode={themeMode}
+          themeAriaLabel={themeAriaLabel}
+          themeIcon={themeIcon}
+          cycleThemeMode={cycleThemeMode}
+          status={status}
+          healthColor={healthColor}
+          healthAria={healthAria}
+        />
 
-        <Box component="nav" sx={{ width: { sm: drawerOpen ? drawerWidth : drawerCollapsedWidth }, flexShrink: { sm: 0 } }}>
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={() => setMobileOpen(false)}
-          ModalProps={{ keepMounted: true }}
-          sx={{ display: { xs: "block", sm: "none" }, "& .MuiDrawer-paper": { boxSizing: "border-box", width: drawerWidth } }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: "none", sm: "block" },
-            "& .MuiDrawer-paper": {
-              boxSizing: "border-box",
-              width: drawerOpen ? drawerWidth : drawerCollapsedWidth,
-              overflowX: "hidden",
-              transition: (theme) =>
-                theme.transitions.create("width", {
-                  easing: theme.transitions.easing.sharp,
-                  duration: theme.transitions.duration.enteringScreen,
-                }),
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-        </Box>
+        <AppDrawer
+          drawerOpen={drawerOpen}
+          drawerWidth={drawerWidth}
+          drawerCollapsedWidth={drawerCollapsedWidth}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+          menuItems={menuItems}
+          authState={authState}
+          activeMenu={activeMenu}
+          handleMenuClick={handleMenuClick}
+        />
 
         <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` } }}>
-        <Toolbar />
+          <Toolbar />
 
-        {activeMenu === "history" && (
-          <Stack spacing={2}>
-            <Typography variant="h5">Historical Data</Typography>
-            {historyState.loading && <Typography>Loading history…</Typography>}
-            {!historyState.loading && historyState.error && <Typography>History: {historyState.error}</Typography>}
-            {!historyState.loading && !historyState.error && historyState.points.length === 0 && <Typography>No history data yet.</Typography>}
-            {!historyState.loading && !historyState.error && historyState.points.length > 0 && (
-              <Paper sx={{ p: 2 }}>
-                <Typography>Points: {historyState.points.length}</Typography>
-                <Box sx={{ mt: 1 }}>
-                  <svg viewBox="0 0 700 240" role="img" aria-label="Temperature and humidity history chart">
-                    <polyline points={chart.temperatureLine} fill="none" stroke="#cc2936" strokeWidth="2" />
-                    <polyline points={chart.humidityLine} fill="none" stroke="#1f77b4" strokeWidth="2" />
-                  </svg>
-                </Box>
-                <Typography>Temp range: {chart.tempMin.toFixed(1)}°C → {chart.tempMax.toFixed(1)}°C</Typography>
-                <Typography>Humidity range: {chart.humidityMin.toFixed(1)}% → {chart.humidityMax.toFixed(1)}%</Typography>
-              </Paper>
-            )}
-          </Stack>
-        )}
+          {activeMenu === "history" && <HistorySection historyState={historyState} chart={chart} />}
 
-        {activeMenu === "devices" && (
-          <Stack spacing={2}>
-            <Typography variant="h5">Device Names</Typography>
-            {devicesState.loading && <Typography>Loading devices…</Typography>}
-            {!devicesState.loading && devicesState.error && <Typography>Devices: {devicesState.error}</Typography>}
-            {!devicesState.loading && !devicesState.error && devicesState.devices.length === 0 && (
-              <Typography>No devices yet. Run a read command first.</Typography>
-            )}
-            {!devicesState.loading && !devicesState.error && devicesState.devices.length > 0 && (
-              <Paper>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Name</TableCell>
-                      <TableCell>MAC</TableCell>
-                      <TableCell>Alias</TableCell>
-                      <TableCell>Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {devicesState.devices.map((device) => (
-                      <TableRow key={device.address}>
-                        <TableCell>{device.display_name || device.detected_name || device.address}</TableCell>
-                        <TableCell>{device.address}</TableCell>
-                        <TableCell>
-                          <Input
-                            inputProps={{ "aria-label": `alias-${device.address}` }}
-                            value={aliasInputs[device.address] ?? ""}
-                            onChange={(event) =>
-                              setAliasInputs((previous) => ({
-                                ...previous,
-                                [device.address]: event.target.value,
-                              }))
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button size="small" variant="contained" onClick={() => saveAlias(device.address)}>
-                            Save
-                          </Button>
-                          {savingState[device.address] === "saving" && <Typography component="span"> saving…</Typography>}
-                          {savingState[device.address] === "saved" && <Typography component="span"> saved</Typography>}
-                          {savingState[device.address] === "error" && <Typography component="span"> error</Typography>}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Paper>
-            )}
-          </Stack>
-        )}
+          {activeMenu === "devices" && (
+            <DevicesSection
+              devicesState={devicesState}
+              aliasInputs={aliasInputs}
+              setAliasInputs={setAliasInputs}
+              saveAlias={saveAlias}
+              savingState={savingState}
+            />
+          )}
 
-        {activeMenu === "login" && (
-          <Box sx={{ minHeight: "calc(100vh - 112px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <Stack spacing={2} component="form" onSubmit={submitLogin} sx={{ width: "100%", maxWidth: 420 }}>
-              <Typography variant="h5">Login</Typography>
-              {authState.loggedIn ? (
-                <Typography>You are logged in as {authState.username}.</Typography>
-              ) : (
-                <>
-                  <TextField
-                    label="Username"
-                    value={loginForm.username}
-                    onChange={(event) => setLoginForm((prev) => ({ ...prev, username: event.target.value }))}
-                    sx={loginFieldSx}
-                  />
-                  <TextField
-                    type={showPassword ? "text" : "password"}
-                    label="Password"
-                    value={loginForm.password}
-                    onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
-                    sx={loginFieldSx}
-                    InputProps={{
-                      sx: {
-                        "& .MuiInputAdornment-root": {
-                          backgroundColor: "primary.main",
-                        },
-                        "& .MuiIconButton-root": {
-                          color: "common.white",
-                          backgroundColor: "primary.main",
-                          borderRadius: 0,
-                          "&:hover": {
-                            backgroundColor: "primary.main",
-                          },
-                        },
-                      },
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            edge="end"
-                            aria-label={showPassword ? "hide-password" : "show-password"}
-                            onClick={() => setShowPassword((current) => !current)}
-                          >
-                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button type="submit" variant="contained" aria-label="login-submit">
-                    Login
-                  </Button>
-                </>
-              )}
-            </Stack>
-          </Box>
-        )}
+          {activeMenu === "login" && (
+            <LoginSection
+              authState={authState}
+              loginForm={loginForm}
+              setLoginForm={setLoginForm}
+              submitLogin={submitLogin}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              loginFieldSx={loginFieldSx}
+            />
+          )}
 
-        {activeMenu === "about" && (
-          <Stack spacing={1}>
-            <Typography variant="h5">About</Typography>
-            <Typography>Govee dashboard for historical temperature and humidity data.</Typography>
-            <Typography>Use the Device Names section to assign human-friendly names.</Typography>
-          </Stack>
-        )}
+          {activeMenu === "about" && <AboutSection />}
         </Box>
         <Snackbar open={snack.open} autoHideDuration={2500} onClose={() => setSnack({ open: false, message: "" })} message={snack.message} />
       </Box>
     </ThemeProvider>
   );
-}
-
-function buildChart(points) {
-  const width = 700;
-  const height = 240;
-  const padding = 16;
-
-  if (!points.length) {
-    return {
-      temperatureLine: "",
-      humidityLine: "",
-      tempMin: 0,
-      tempMax: 0,
-      humidityMin: 0,
-      humidityMax: 0,
-    };
-  }
-
-  const temperatures = points.map((point) => Number(point.temperature_c));
-  const humidities = points.map((point) => Number(point.humidity_pct));
-
-  const tempMin = Math.min(...temperatures);
-  const tempMax = Math.max(...temperatures);
-  const humidityMin = Math.min(...humidities);
-  const humidityMax = Math.max(...humidities);
-
-  const xForIndex = (index) => {
-    if (points.length === 1) {
-      return width / 2;
-    }
-    const ratio = index / (points.length - 1);
-    return padding + ratio * (width - padding * 2);
-  };
-
-  const yForValue = (value, min, max) => {
-    if (max === min) {
-      return height / 2;
-    }
-    const ratio = (value - min) / (max - min);
-    return height - padding - ratio * (height - padding * 2);
-  };
-
-  const temperatureLine = points
-    .map((point, index) => `${xForIndex(index)},${yForValue(Number(point.temperature_c), tempMin, tempMax)}`)
-    .join(" ");
-
-  const humidityLine = points
-    .map((point, index) => `${xForIndex(index)},${yForValue(Number(point.humidity_pct), humidityMin, humidityMax)}`)
-    .join(" ");
-
-  return {
-    temperatureLine,
-    humidityLine,
-    tempMin,
-    tempMax,
-    humidityMin,
-    humidityMax,
-  };
 }
