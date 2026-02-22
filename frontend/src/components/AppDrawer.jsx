@@ -1,10 +1,9 @@
 import React from "react";
 import { Box, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
+import "./AppDrawer.css";
 
 export default function AppDrawer({
   drawerOpen,
-  drawerWidth,
-  drawerCollapsedWidth,
   mobileOpen,
   setMobileOpen,
   menuItems,
@@ -12,6 +11,8 @@ export default function AppDrawer({
   activeMenu,
   handleMenuClick,
 }) {
+  const drawerStateClass = drawerOpen ? "drawer-open" : "drawer-closed";
+
   const drawer = (
     <Box>
       <Toolbar>{drawerOpen && <Typography variant="h6">Govee Dashboard</Typography>}</Toolbar>
@@ -26,10 +27,10 @@ export default function AppDrawer({
               disabled={!isEnabled}
               selected={activeMenu === item.key}
               onClick={() => handleMenuClick(item.key)}
-              sx={{ minHeight: 48, justifyContent: drawerOpen ? "initial" : "center", px: 2.5 }}
+              className={`app-drawer-list-item ${drawerStateClass}`}
             >
-              <ListItemIcon sx={{ minWidth: 0, mr: drawerOpen ? 2 : "auto", justifyContent: "center" }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} sx={{ opacity: drawerOpen ? 1 : 0 }} />
+              <ListItemIcon className={`app-drawer-list-item-icon ${drawerStateClass}`}>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.label} className={`app-drawer-list-item-text ${drawerStateClass}`} />
             </ListItemButton>
           );
         })}
@@ -38,31 +39,19 @@ export default function AppDrawer({
   );
 
   return (
-    <Box component="nav" sx={{ width: { sm: drawerOpen ? drawerWidth : drawerCollapsedWidth }, flexShrink: { sm: 0 } }}>
+    <Box component="nav" className={`app-drawer-nav ${drawerStateClass}`}>
       <Drawer
         variant="temporary"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         ModalProps={{ keepMounted: true }}
-        sx={{ display: { xs: "block", sm: "none" }, "& .MuiDrawer-paper": { boxSizing: "border-box", width: drawerWidth } }}
+        className="app-drawer-mobile"
       >
         {drawer}
       </Drawer>
       <Drawer
         variant="permanent"
-        sx={{
-          display: { xs: "none", sm: "block" },
-          "& .MuiDrawer-paper": {
-            boxSizing: "border-box",
-            width: drawerOpen ? drawerWidth : drawerCollapsedWidth,
-            overflowX: "hidden",
-            transition: (theme) =>
-              theme.transitions.create("width", {
-                easing: theme.transitions.easing.sharp,
-                duration: theme.transitions.duration.enteringScreen,
-              }),
-          },
-        }}
+        className={`app-drawer-desktop ${drawerStateClass}`}
         open
       >
         {drawer}

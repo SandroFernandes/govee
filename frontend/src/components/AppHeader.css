@@ -1,0 +1,35 @@
+@media (min-width: 600px) {
+  .app-header.app-header-open {
+    width: calc(100% - var(--drawer-width-open));
+    margin-left: var(--drawer-width-open);
+  }
+
+  .app-header.app-header-closed {
+    width: calc(100% - var(--drawer-width-collapsed));
+    margin-left: var(--drawer-width-collapsed);
+  }
+}
+
+.app-header-menu-button {
+  margin-right: 16px;
+}
+
+.app-header-title {
+  flex-grow: 1;
+}
+
+.app-header-theme-button {
+  margin-right: 8px;
+}
+
+.app-header-health-icon.health-ok {
+  color: var(--mui-palette-success-main, #2e7d32);
+}
+
+.app-header-health-icon.health-unreachable {
+  color: var(--mui-palette-error-main, #d32f2f);
+}
+
+.app-header-health-icon.health-checking {
+  color: var(--mui-palette-warning-main, #ed6c02);
+}

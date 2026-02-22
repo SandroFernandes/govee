@@ -1,0 +1,81 @@
+.app-drawer-list-item {
+  min-height: 48px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.app-drawer-list-item.drawer-open {
+  justify-content: initial;
+}
+
+.app-drawer-list-item.drawer-closed {
+  justify-content: center;
+}
+
+.app-drawer-list-item-icon {
+  min-width: 0;
+  justify-content: center;
+}
+
+.app-drawer-list-item-icon.drawer-open {
+  margin-right: 16px;
+}
+
+.app-drawer-list-item-icon.drawer-closed {
+  margin-right: auto;
+}
+
+.app-drawer-list-item-text.drawer-open {
+  opacity: 1;
+}
+
+.app-drawer-list-item-text.drawer-closed {
+  opacity: 0;
+}
+
+.app-drawer-mobile {
+  display: block;
+}
+
+.app-drawer-mobile .MuiDrawer-paper {
+  box-sizing: border-box;
+  width: var(--drawer-width-open);
+}
+
+.app-drawer-desktop {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .app-drawer-nav.drawer-open {
+    width: var(--drawer-width-open);
+    flex-shrink: 0;
+  }
+
+  .app-drawer-nav.drawer-closed {
+    width: var(--drawer-width-collapsed);
+    flex-shrink: 0;
+  }
+
+  .app-drawer-mobile {
+    display: none;
+  }
+
+  .app-drawer-desktop {
+    display: block;
+  }
+
+  .app-drawer-desktop .MuiDrawer-paper {
+    box-sizing: border-box;
+    overflow-x: hidden;
+    transition: width 225ms cubic-bezier(0.4, 0, 0.6, 1);
+  }
+
+  .app-drawer-desktop.drawer-open .MuiDrawer-paper {
+    width: var(--drawer-width-open);
+  }
+
+  .app-drawer-desktop.drawer-closed .MuiDrawer-paper {
+    width: var(--drawer-width-collapsed);
+  }
+}

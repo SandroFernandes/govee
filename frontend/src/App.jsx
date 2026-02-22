@@ -11,13 +11,14 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import "./App.css";
 import AboutSection from "./components/AboutSection";
 import AppDrawer from "./components/AppDrawer";
 import AppHeader from "./components/AppHeader";
 import DevicesSection from "./components/DevicesSection";
 import HistorySection from "./components/HistorySection";
 import LoginSection from "./components/LoginSection";
-import { drawerCollapsedWidth, drawerWidth, menuItems } from "./constants/menuItems";
+import { menuItems } from "./constants/menuItems";
 import useAuth from "./hooks/useAuth";
 import useDevicesData from "./hooks/useDevicesData";
 import useHealthStatus from "./hooks/useHealthStatus";
@@ -67,7 +68,6 @@ export default function App() {
   }, [authState.loggedIn, activeMenu]);
 
   const chart = buildChart(historyState.points);
-  const healthColor = status === "ok" ? "success.main" : status === "unreachable" ? "error.main" : "warning.main";
   const healthAria = status === "ok" ? "backend-status-ok" : status === "unreachable" ? "backend-status-unreachable" : "backend-status-checking";
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const effectiveThemeMode = themeMode === "system" ? (prefersDarkMode ? "dark" : "light") : themeMode;
@@ -91,47 +91,23 @@ export default function App() {
 
   const themeIcon = themeMode === "system" ? <AutoModeIcon fontSize="small" /> : themeMode === "light" ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />;
   const themeAriaLabel = `theme-mode-${themeMode}`;
-  const loginFieldSx = {
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "primary.main",
-      color: "common.white",
-    },
-    "& .MuiOutlinedInput-notchedOutline": {
-      borderColor: "primary.light",
-    },
-    "& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-      borderColor: "primary.light",
-    },
-    "& .MuiInputLabel-root": {
-      color: "text.secondary",
-    },
-    "& .MuiSvgIcon-root": {
-      color: "common.white",
-    },
-  };
-
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ display: "flex" }}>
+      <Box className={`app-shell ${drawerOpen ? "drawer-open" : "drawer-closed"}`}>
         <CssBaseline />
         <AppHeader
           drawerOpen={drawerOpen}
-          drawerWidth={drawerWidth}
-          drawerCollapsedWidth={drawerCollapsedWidth}
           toggleDrawer={toggleDrawer}
           themeMode={themeMode}
           themeAriaLabel={themeAriaLabel}
           themeIcon={themeIcon}
           cycleThemeMode={cycleThemeMode}
           status={status}
-          healthColor={healthColor}
           healthAria={healthAria}
         />
 
         <AppDrawer
           drawerOpen={drawerOpen}
-          drawerWidth={drawerWidth}
-          drawerCollapsedWidth={drawerCollapsedWidth}
           mobileOpen={mobileOpen}
           setMobileOpen={setMobileOpen}
           menuItems={menuItems}
@@ -140,7 +116,7 @@ export default function App() {
           handleMenuClick={handleMenuClick}
         />
 
-        <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : drawerCollapsedWidth}px)` } }}>
+        <Box component="main" className="app-main">
           <Toolbar />
 
           {activeMenu === "history" && <HistorySection historyState={historyState} chart={chart} />}
@@ -163,7 +139,6 @@ export default function App() {
               submitLogin={submitLogin}
               showPassword={showPassword}
               setShowPassword={setShowPassword}
-              loginFieldSx={loginFieldSx}
             />
           )}
 

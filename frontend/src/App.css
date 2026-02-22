@@ -1,0 +1,23 @@
+:root {
+  --drawer-width-open: 280px;
+  --drawer-width-collapsed: 72px;
+}
+
+.app-shell {
+  display: flex;
+}
+
+.app-main {
+  flex-grow: 1;
+  padding: 24px;
+}
+
+@media (min-width: 600px) {
+  .app-shell.drawer-open .app-main {
+    width: calc(100% - var(--drawer-width-open));
+  }
+
+  .app-shell.drawer-closed .app-main {
+    width: calc(100% - var(--drawer-width-collapsed));
+  }
+}

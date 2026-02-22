@@ -1,0 +1,46 @@
+.login-section {
+  min-height: calc(100vh - 112px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-field .MuiOutlinedInput-root {
+  background-color: var(--mui-palette-primary-main, #1976d2);
+  color: var(--mui-palette-common-white, #ffffff);
+}
+
+.login-field .MuiOutlinedInput-notchedOutline {
+  border-color: var(--mui-palette-primary-light, #42a5f5);
+}
+
+.login-field .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--mui-palette-primary-light, #42a5f5);
+}
+
+.login-field .MuiInputLabel-root {
+  color: var(--mui-palette-text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.login-field .MuiSvgIcon-root {
+  color: var(--mui-palette-common-white, #ffffff);
+}
+
+.login-password-field .MuiInputAdornment-root {
+  background-color: var(--mui-palette-primary-main, #1976d2);
+}
+
+.login-password-toggle {
+  color: var(--mui-palette-common-white, #ffffff) !important;
+  background-color: var(--mui-palette-primary-main, #1976d2) !important;
+  border-radius: 0 !important;
+}
+
+.login-password-toggle:hover {
+  background-color: var(--mui-palette-primary-main, #1976d2) !important;
+}
