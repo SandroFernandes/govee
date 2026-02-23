@@ -29,6 +29,7 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("history");
+  const [historyLimit, setHistoryLimit] = useState(1000);
   const [themeMode, setThemeMode] = useState("system");
   const [snack, setSnack] = useState({ open: false, message: "" });
 
@@ -37,7 +38,7 @@ export default function App() {
   }
 
   const status = useHealthStatus();
-  const historyState = useHistoryData();
+  const historyState = useHistoryData(historyLimit);
   const { devicesState, aliasInputs, setAliasInputs, savingState, saveAlias } = useDevicesData(showMessage);
   const { authState, loginForm, setLoginForm, showPassword, setShowPassword, submitLogin, performLogout } = useAuth(showMessage, setActiveMenu);
 
@@ -119,7 +120,7 @@ export default function App() {
         <Box component="main" className="app-main">
           <Toolbar />
 
-          {activeMenu === "history" && <HistorySection historyState={historyState} chart={chart} />}
+          {activeMenu === "history" && <HistorySection historyState={historyState} chart={chart} historyLimit={historyLimit} setHistoryLimit={setHistoryLimit} />}
 
           {activeMenu === "devices" && (
             <DevicesSection

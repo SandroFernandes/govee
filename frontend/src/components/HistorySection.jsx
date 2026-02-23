@@ -1,11 +1,29 @@
 import React from "react";
-import { Box, Paper, Stack, Typography } from "@mui/material";
+import { Box, Paper, Stack, TextField, Typography } from "@mui/material";
 import "./HistorySection.css";
 
-export default function HistorySection({ historyState, chart }) {
+export default function HistorySection({ historyState, chart, historyLimit, setHistoryLimit }) {
+  function handleLimitChange(event) {
+    const nextValue = Number.parseInt(event.target.value, 10);
+    if (Number.isNaN(nextValue)) {
+      return;
+    }
+    setHistoryLimit(Math.max(1, Math.min(10000, nextValue)));
+  }
+
   return (
     <Stack spacing={2}>
       <Typography variant="h5">Historical Data</Typography>
+      <Box>
+        <TextField
+          label="Points"
+          type="number"
+          value={historyLimit}
+          onChange={handleLimitChange}
+          inputProps={{ min: 1, max: 10000, step: 100 }}
+          size="small"
+        />
+      </Box>
       {historyState.loading && <Typography>Loading history…</Typography>}
       {!historyState.loading && historyState.error && <Typography>History: {historyState.error}</Typography>}
       {!historyState.loading && !historyState.error && historyState.points.length === 0 && <Typography>No history data yet.</Typography>}
