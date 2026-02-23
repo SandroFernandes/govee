@@ -11,7 +11,14 @@ import {
 } from "recharts";
 import "./HistorySection.css";
 
-export default function HistorySection({ historyState, historyInterval, setHistoryInterval }) {
+export default function HistorySection({
+  historyState,
+  historyInterval,
+  setHistoryInterval,
+  historyAddress,
+  setHistoryAddress,
+  devices,
+}) {
   const chartData = historyState.points.map((point, index) => ({
     id: `${point.address || "device"}-${point.measured_at || index}`,
     measuredAt: point.measured_at || "",
@@ -42,6 +49,10 @@ export default function HistorySection({ historyState, historyInterval, setHisto
     setHistoryInterval(event.target.value);
   }
 
+  function handleAddressChange(event) {
+    setHistoryAddress(event.target.value);
+  }
+
   function formatTimestamp(value) {
     if (!Number.isFinite(value)) {
       return "";
@@ -57,19 +68,37 @@ export default function HistorySection({ historyState, historyInterval, setHisto
     <Stack spacing={2}>
       <Typography variant="h5">Historical Data</Typography>
       <Box>
-        <TextField
-          label="Interval"
-          select
-          value={historyInterval}
-          onChange={handleIntervalChange}
-          size="small"
-          className="history-interval-field"
-        >
-          <MenuItem value="days">Days</MenuItem>
-          <MenuItem value="weeks">Weeks</MenuItem>
-          <MenuItem value="months">Months</MenuItem>
-          <MenuItem value="years">Years</MenuItem>
-        </TextField>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <TextField
+            label="Interval"
+            select
+            value={historyInterval}
+            onChange={handleIntervalChange}
+            size="small"
+            className="history-interval-field"
+          >
+            <MenuItem value="days">Days</MenuItem>
+            <MenuItem value="weeks">Weeks</MenuItem>
+            <MenuItem value="months">Months</MenuItem>
+            <MenuItem value="years">Years</MenuItem>
+          </TextField>
+
+          <TextField
+            label="Device"
+            select
+            value={historyAddress}
+            onChange={handleAddressChange}
+            size="small"
+            className="history-interval-field"
+          >
+            <MenuItem value="">All devices</MenuItem>
+            {devices.map((device) => (
+              <MenuItem key={device.address} value={device.address}>
+                {device.display_name || device.address}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
       </Box>
       {historyState.loading && <Typography>Loading history…</Typography>}
       {!historyState.loading && historyState.error && <Typography>History: {historyState.error}</Typography>}

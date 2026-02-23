@@ -7,20 +7,27 @@ const INTERVAL_HOURS = {
   years: 24 * 365,
 };
 
-export default function useHistoryData(intervalUnit) {
+export default function useHistoryData(intervalUnit, address) {
   const [historyState, setHistoryState] = useState({ loading: true, error: "", points: [] });
 
   useEffect(() => {
     let isMounted = true;
     const normalizedIntervalUnit = Object.prototype.hasOwnProperty.call(INTERVAL_HOURS, intervalUnit) ? intervalUnit : "weeks";
     const intervalHours = INTERVAL_HOURS[normalizedIntervalUnit];
+    const normalizedAddress = (address || "").trim();
+
+    const baseParams = new URLSearchParams();
+    baseParams.set("limit", "10000");
+    if (normalizedAddress) {
+      baseParams.set("address", normalizedAddress);
+    }
 
     async function loadHistory() {
       try {
         let points = [];
 
         if (normalizedIntervalUnit === "days") {
-          const response = await fetch("/api/history/?limit=10000");
+          const response = await fetch(`/api/history/?${baseParams.toString()}`);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
@@ -48,7 +55,9 @@ export default function useHistoryData(intervalUnit) {
             }
           }
         } else {
-          const response = await fetch(`/api/history/?hours=${intervalHours}&limit=10000`);
+          const intervalParams = new URLSearchParams(baseParams);
+          intervalParams.set("hours", String(intervalHours));
+          const response = await fetch(`/api/history/?${intervalParams.toString()}`);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
@@ -78,7 +87,7 @@ export default function useHistoryData(intervalUnit) {
       isMounted = false;
       clearInterval(timerId);
     };
-  }, [intervalUnit]);
+  }, [intervalUnit, address]);
 
   return historyState;
 }

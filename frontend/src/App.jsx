@@ -29,6 +29,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("history");
   const [historyInterval, setHistoryInterval] = useState("weeks");
+  const [historyAddress, setHistoryAddress] = useState("");
   const [themeMode, setThemeMode] = useState("system");
   const [snack, setSnack] = useState({ open: false, message: "" });
 
@@ -37,7 +38,7 @@ export default function App() {
   }
 
   const status = useHealthStatus();
-  const historyState = useHistoryData(historyInterval);
+  const historyState = useHistoryData(historyInterval, historyAddress);
   const { devicesState, aliasInputs, setAliasInputs, savingState, saveAlias } = useDevicesData(showMessage);
   const { authState, loginForm, setLoginForm, showPassword, setShowPassword, submitLogin, performLogout } = useAuth(showMessage, setActiveMenu);
 
@@ -66,6 +67,18 @@ export default function App() {
       setActiveMenu("login");
     }
   }, [authState.loggedIn, activeMenu]);
+
+  useEffect(() => {
+    if (!devicesState.devices.length) {
+      setHistoryAddress("");
+      return;
+    }
+
+    const selectedExists = devicesState.devices.some((device) => device.address === historyAddress);
+    if (!selectedExists) {
+      setHistoryAddress(devicesState.devices[0].address);
+    }
+  }, [devicesState.devices, historyAddress]);
 
   const healthAria = status === "ok" ? "backend-status-ok" : status === "unreachable" ? "backend-status-unreachable" : "backend-status-checking";
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
@@ -118,7 +131,16 @@ export default function App() {
         <Box component="main" className="app-main">
           <Toolbar />
 
-          {activeMenu === "history" && <HistorySection historyState={historyState} historyInterval={historyInterval} setHistoryInterval={setHistoryInterval} />}
+          {activeMenu === "history" && (
+            <HistorySection
+              historyState={historyState}
+              historyInterval={historyInterval}
+              setHistoryInterval={setHistoryInterval}
+              historyAddress={historyAddress}
+              setHistoryAddress={setHistoryAddress}
+              devices={devicesState.devices}
+            />
+          )}
 
           {activeMenu === "devices" && (
             <DevicesSection
