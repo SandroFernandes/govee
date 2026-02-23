@@ -34,6 +34,24 @@ export default function HistorySection({
   const humidityMin = humidities.length ? Math.min(...humidities) : 0;
   const humidityMax = humidities.length ? Math.max(...humidities) : 0;
 
+  function buildPaddedDomain(minValue, maxValue) {
+    if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+      return [0, 1];
+    }
+
+    if (minValue === maxValue) {
+      const basePadding = Math.max(Math.abs(minValue) * 0.05, 0.5);
+      return [minValue - basePadding, maxValue + basePadding];
+    }
+
+    const spread = maxValue - minValue;
+    const padding = Math.max(spread * 0.08, 0.2);
+    return [minValue - padding, maxValue + padding];
+  }
+
+  const temperatureDomain = buildPaddedDomain(tempMin, tempMax);
+  const humidityDomain = buildPaddedDomain(humidityMin, humidityMax);
+
   const latestTimestampMs = chartData.length ? chartData[chartData.length - 1].measuredAtMs : null;
   let xDomain = ["dataMin", "dataMax"];
   if (historyInterval === "days" && Number.isFinite(latestTimestampMs)) {
@@ -62,6 +80,10 @@ export default function HistorySection({
       return value;
     }
     return date.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function formatAxisValue(value) {
+    return Number(value).toFixed(1);
   }
 
   return (
@@ -108,7 +130,7 @@ export default function HistorySection({
           <Typography variant="subtitle2" className="history-chart-title">Temperature</Typography>
           <Box className="history-chart-wrap">
             <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="measuredAtMs"
@@ -118,7 +140,7 @@ export default function HistorySection({
                   tickFormatter={formatTimestamp}
                   minTickGap={36}
                 />
-                <YAxis unit="°C" domain={["auto", "auto"]} />
+                <YAxis unit="°C" domain={temperatureDomain} width={72} tickFormatter={formatAxisValue} />
                 <Tooltip labelFormatter={formatTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}°C`, "Temperature"]} />
                 <Line type="monotone" dataKey="temperature_c" stroke="#cc2936" strokeWidth={2} dot={false} isAnimationActive={false} />
               </LineChart>
@@ -127,7 +149,7 @@ export default function HistorySection({
           <Typography variant="subtitle2" className="history-chart-title">Humidity</Typography>
           <Box className="history-chart-wrap">
             <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="measuredAtMs"
@@ -137,7 +159,7 @@ export default function HistorySection({
                   tickFormatter={formatTimestamp}
                   minTickGap={36}
                 />
-                <YAxis unit="%" domain={["auto", "auto"]} />
+                <YAxis unit="%" domain={humidityDomain} width={72} tickFormatter={formatAxisValue} />
                 <Tooltip labelFormatter={formatTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}%`, "Humidity"]} />
                 <Line type="monotone" dataKey="humidity_pct" stroke="#1f77b4" strokeWidth={2} dot={false} isAnimationActive={false} />
               </LineChart>
