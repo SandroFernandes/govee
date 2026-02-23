@@ -91,7 +91,6 @@ export default function HistorySection({
             size="small"
             className="history-interval-field"
           >
-            <MenuItem value="">All devices</MenuItem>
             {devices.map((device) => (
               <MenuItem key={device.address} value={device.address}>
                 {device.display_name || device.address}
