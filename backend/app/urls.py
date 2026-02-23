@@ -83,7 +83,7 @@ def history_values(request: object) -> JsonResponse:
         if hours <= 0:
             return JsonResponse({"error": "Invalid 'hours'. Must be > 0."}, status=400)
 
-    queryset = H5075HistoricalMeasurement.objects.all().order_by("measured_at")
+    queryset = H5075HistoricalMeasurement.objects.all().order_by("-measured_at")
 
     if address:
         queryset = queryset.filter(address__iexact=address)
@@ -93,6 +93,7 @@ def history_values(request: object) -> JsonResponse:
         queryset = queryset.filter(measured_at__gte=cutoff)
 
     rows = list(queryset[:limit])
+    rows.reverse()
     address_keys = {(row.address or "").strip().lower() for row in rows if row.address}
     alias_map = {item.address.lower(): item.display_name for item in H5075DeviceAlias.objects.filter(address__in=address_keys)}
 
