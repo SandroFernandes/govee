@@ -104,6 +104,8 @@ class AuthApiEndpointTests(TestCase):
 class HistoryApiEndpointTests(TestCase):
     def setUp(self) -> None:
         self.client = Client()
+        self.user_model = get_user_model()
+        self.user = self.user_model.objects.create_user(username="sandro", password="secret-123")
 
     def test_history_api_returns_chart_points(self) -> None:
         H5075HistoricalMeasurement.objects.create(
@@ -189,6 +191,7 @@ class HistoryApiEndpointTests(TestCase):
 
     def test_devices_api_updates_alias(self) -> None:
         H5075DeviceAlias.objects.create(address="aa:bb:cc:dd:ee:01", alias="", detected_name="H5075_A")
+        self.client.force_login(self.user)
 
         response = self.client.post(
             "/api/devices/",
@@ -203,7 +206,19 @@ class HistoryApiEndpointTests(TestCase):
         refreshed = H5075DeviceAlias.objects.get(address="aa:bb:cc:dd:ee:01")
         self.assertEqual(refreshed.alias, "Living Room")
 
+    def test_devices_api_rejects_unauthenticated_post(self) -> None:
+        response = self.client.post(
+            "/api/devices/",
+            data=json.dumps({"address": "AA:BB:CC:DD:EE:01", "alias": "Kitchen"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("Authentication required", response.json()["error"])
+
     def test_devices_api_rejects_missing_address(self) -> None:
+        self.client.force_login(self.user)
+
         response = self.client.post(
             "/api/devices/",
             data=json.dumps({"alias": "Kitchen"}),

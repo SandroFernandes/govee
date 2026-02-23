@@ -1,9 +1,43 @@
 import { useEffect, useState } from "react";
 
+function readCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop().split(";").shift() || "";
+  }
+  return "";
+}
+
 export default function useDevicesData(showMessage) {
   const [devicesState, setDevicesState] = useState({ loading: true, error: "", devices: [] });
   const [aliasInputs, setAliasInputs] = useState({});
   const [savingState, setSavingState] = useState({});
+
+  async function ensureCsrfToken() {
+    const existing = readCookie("csrftoken");
+    if (existing) {
+      return existing;
+    }
+
+    const response = await fetch("/api/auth/csrf/", { credentials: "include" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+
+    const token = readCookie("csrftoken");
+    if (token) {
+      return token;
+    }
+
+    if (payload?.csrfToken) {
+      return String(payload.csrfToken);
+    }
+
+    throw new Error("missing-csrf-token");
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -50,9 +84,14 @@ export default function useDevicesData(showMessage) {
     setSavingState((previous) => ({ ...previous, [address]: "saving" }));
 
     try {
+      const csrfToken = await ensureCsrfToken();
       const response = await fetch("/api/devices/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
         body: JSON.stringify({ address, alias }),
       });
 

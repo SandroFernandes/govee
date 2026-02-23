@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from app.models import H5075DeviceAlias, H5075HistoricalMeasurement
@@ -118,9 +118,11 @@ def history_values(request: HttpRequest) -> JsonResponse:
     )
 
 
-@csrf_exempt
 def devices(request: HttpRequest) -> JsonResponse:
     if request.method == "POST":
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authentication required."}, status=401)
+
         try:
             payload = json.loads(request.body.decode("utf-8") or "{}")
         except (json.JSONDecodeError, UnicodeDecodeError):
