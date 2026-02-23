@@ -23,13 +23,12 @@ import useAuth from "./hooks/useAuth";
 import useDevicesData from "./hooks/useDevicesData";
 import useHealthStatus from "./hooks/useHealthStatus";
 import useHistoryData from "./hooks/useHistoryData";
-import { buildChart } from "./utils/chart";
 
 export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("history");
-  const [historyLimit, setHistoryLimit] = useState(100);
+  const [historyInterval, setHistoryInterval] = useState("weeks");
   const [themeMode, setThemeMode] = useState("system");
   const [snack, setSnack] = useState({ open: false, message: "" });
 
@@ -38,7 +37,7 @@ export default function App() {
   }
 
   const status = useHealthStatus();
-  const historyState = useHistoryData(historyLimit);
+  const historyState = useHistoryData(historyInterval);
   const { devicesState, aliasInputs, setAliasInputs, savingState, saveAlias } = useDevicesData(showMessage);
   const { authState, loginForm, setLoginForm, showPassword, setShowPassword, submitLogin, performLogout } = useAuth(showMessage, setActiveMenu);
 
@@ -68,7 +67,6 @@ export default function App() {
     }
   }, [authState.loggedIn, activeMenu]);
 
-  const chart = buildChart(historyState.points);
   const healthAria = status === "ok" ? "backend-status-ok" : status === "unreachable" ? "backend-status-unreachable" : "backend-status-checking";
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const effectiveThemeMode = themeMode === "system" ? (prefersDarkMode ? "dark" : "light") : themeMode;
@@ -120,7 +118,7 @@ export default function App() {
         <Box component="main" className="app-main">
           <Toolbar />
 
-          {activeMenu === "history" && <HistorySection historyState={historyState} chart={chart} historyLimit={historyLimit} setHistoryLimit={setHistoryLimit} />}
+          {activeMenu === "history" && <HistorySection historyState={historyState} historyInterval={historyInterval} setHistoryInterval={setHistoryInterval} />}
 
           {activeMenu === "devices" && (
             <DevicesSection

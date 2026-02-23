@@ -1,45 +1,44 @@
 import React from "react";
-import { Box, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Box, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import "./HistorySection.css";
 
-export default function HistorySection({ historyState, chart, historyLimit, setHistoryLimit }) {
-  const width = 700;
-  const height = 240;
-  const padding = 16;
+export default function HistorySection({ historyState, historyInterval, setHistoryInterval }) {
+  const chartData = historyState.points.map((point, index) => ({
+    id: `${point.address || "device"}-${point.measured_at || index}`,
+    measuredAt: point.measured_at || "",
+    temperature_c: Number(point.temperature_c),
+    humidity_pct: Number(point.humidity_pct),
+  }));
 
-  function handleLimitChange(event) {
-    const nextValue = Number.parseInt(event.target.value, 10);
-    if (Number.isNaN(nextValue)) {
-      return;
-    }
-    setHistoryLimit(Math.max(1, Math.min(10000, nextValue)));
+  const temperatures = chartData.map((point) => point.temperature_c);
+  const humidities = chartData.map((point) => point.humidity_pct);
+  const tempMin = temperatures.length ? Math.min(...temperatures) : 0;
+  const tempMax = temperatures.length ? Math.max(...temperatures) : 0;
+  const humidityMin = humidities.length ? Math.min(...humidities) : 0;
+  const humidityMax = humidities.length ? Math.max(...humidities) : 0;
+
+  function handleIntervalChange(event) {
+    setHistoryInterval(event.target.value);
   }
 
-  function renderAxes(minValue, maxValue, unitSuffix) {
-    const tickCount = 4;
-    const labels = [];
-
-    for (let tick = 0; tick <= tickCount; tick += 1) {
-      const ratio = tick / tickCount;
-      const y = height - padding - ratio * (height - padding * 2);
-      const value = minValue + ratio * (maxValue - minValue);
-      labels.push(
-        <g key={`tick-${unitSuffix}-${tick}`}>
-          <line x1={padding - 4} y1={y} x2={padding} y2={y} stroke="currentColor" opacity="0.55" />
-          <text x={padding - 8} y={y + 3} textAnchor="end" fontSize="10" fill="currentColor" opacity="0.75">
-            {value.toFixed(1)}{unitSuffix}
-          </text>
-        </g>
-      );
+  function formatTimestamp(value) {
+    if (!value) {
+      return "";
     }
-
-    return (
-      <>
-        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="currentColor" opacity="0.45" />
-        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="currentColor" opacity="0.45" />
-        {labels}
-      </>
-    );
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
   }
 
   return (
@@ -47,13 +46,18 @@ export default function HistorySection({ historyState, chart, historyLimit, setH
       <Typography variant="h5">Historical Data</Typography>
       <Box>
         <TextField
-          label="Points"
-          type="number"
-          value={historyLimit}
-          onChange={handleLimitChange}
-          inputProps={{ min: 1, max: 10000, step: 100 }}
+          label="Interval"
+          select
+          value={historyInterval}
+          onChange={handleIntervalChange}
           size="small"
-        />
+          className="history-interval-field"
+        >
+          <MenuItem value="days">Days</MenuItem>
+          <MenuItem value="weeks">Weeks</MenuItem>
+          <MenuItem value="months">Months</MenuItem>
+          <MenuItem value="years">Years</MenuItem>
+        </TextField>
       </Box>
       {historyState.loading && <Typography>Loading history…</Typography>}
       {!historyState.loading && historyState.error && <Typography>History: {historyState.error}</Typography>}
@@ -63,20 +67,30 @@ export default function HistorySection({ historyState, chart, historyLimit, setH
           <Typography>Points: {historyState.points.length}</Typography>
           <Typography variant="subtitle2" className="history-chart-title">Temperature</Typography>
           <Box className="history-chart-wrap">
-            <svg viewBox="0 0 700 240" role="img" aria-label="Temperature history chart">
-              {renderAxes(chart.tempMin, chart.tempMax, "°C")}
-              <polyline points={chart.temperatureLine} fill="none" stroke="#cc2936" strokeWidth="2" />
-            </svg>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="measuredAt" tickFormatter={formatTimestamp} minTickGap={36} />
+                <YAxis unit="°C" domain={["auto", "auto"]} />
+                <Tooltip labelFormatter={formatTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}°C`, "Temperature"]} />
+                <Line type="monotone" dataKey="temperature_c" stroke="#cc2936" strokeWidth={2} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
           </Box>
           <Typography variant="subtitle2" className="history-chart-title">Humidity</Typography>
           <Box className="history-chart-wrap">
-            <svg viewBox="0 0 700 240" role="img" aria-label="Humidity history chart">
-              {renderAxes(chart.humidityMin, chart.humidityMax, "%")}
-              <polyline points={chart.humidityLine} fill="none" stroke="#1f77b4" strokeWidth="2" />
-            </svg>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="measuredAt" tickFormatter={formatTimestamp} minTickGap={36} />
+                <YAxis unit="%" domain={["auto", "auto"]} />
+                <Tooltip labelFormatter={formatTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}%`, "Humidity"]} />
+                <Line type="monotone" dataKey="humidity_pct" stroke="#1f77b4" strokeWidth={2} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
           </Box>
-          <Typography>Temp range: {chart.tempMin.toFixed(1)}°C → {chart.tempMax.toFixed(1)}°C</Typography>
-          <Typography>Humidity range: {chart.humidityMin.toFixed(1)}% → {chart.humidityMax.toFixed(1)}%</Typography>
+          <Typography>Temp range: {tempMin.toFixed(1)}°C → {tempMax.toFixed(1)}°C</Typography>
+          <Typography>Humidity range: {humidityMin.toFixed(1)}% → {humidityMax.toFixed(1)}%</Typography>
         </Paper>
       )}
     </Stack>

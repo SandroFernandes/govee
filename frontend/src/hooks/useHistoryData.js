@@ -1,32 +1,29 @@
 import { useEffect, useState } from "react";
 
-export default function useHistoryData(limit) {
+const INTERVAL_HOURS = {
+  days: 24,
+  weeks: 24 * 7,
+  months: 24 * 30,
+  years: 24 * 365,
+};
+
+export default function useHistoryData(intervalUnit) {
   const [historyState, setHistoryState] = useState({ loading: true, error: "", points: [] });
 
   useEffect(() => {
     let isMounted = true;
-    const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(10000, Math.floor(limit))) : 100;
+    const normalizedIntervalUnit = Object.prototype.hasOwnProperty.call(INTERVAL_HOURS, intervalUnit) ? intervalUnit : "weeks";
+    const intervalHours = INTERVAL_HOURS[normalizedIntervalUnit];
 
     async function loadHistory() {
       try {
-        const recentResponse = await fetch(`/api/history/?hours=168&limit=${normalizedLimit}`);
-        if (!recentResponse.ok) {
-          throw new Error(`HTTP ${recentResponse.status}`);
+        const response = await fetch(`/api/history/?hours=${intervalHours}&limit=10000`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
 
-        const recentData = await recentResponse.json();
-        const recentPoints = Array.isArray(recentData.points) ? recentData.points : [];
-
-        let points = recentPoints;
-        if (recentPoints.length === 0) {
-          const allResponse = await fetch(`/api/history/?limit=${normalizedLimit}`);
-          if (!allResponse.ok) {
-            throw new Error(`HTTP ${allResponse.status}`);
-          }
-
-          const allData = await allResponse.json();
-          points = Array.isArray(allData.points) ? allData.points : [];
-        }
+        const data = await response.json();
+        const points = Array.isArray(data.points) ? data.points : [];
 
         if (isMounted) {
           setHistoryState({
@@ -49,7 +46,7 @@ export default function useHistoryData(limit) {
       isMounted = false;
       clearInterval(timerId);
     };
-  }, [limit]);
+  }, [intervalUnit]);
 
   return historyState;
 }
