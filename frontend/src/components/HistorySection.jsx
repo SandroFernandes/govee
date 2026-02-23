@@ -3,12 +3,43 @@ import { Box, Paper, Stack, TextField, Typography } from "@mui/material";
 import "./HistorySection.css";
 
 export default function HistorySection({ historyState, chart, historyLimit, setHistoryLimit }) {
+  const width = 700;
+  const height = 240;
+  const padding = 16;
+
   function handleLimitChange(event) {
     const nextValue = Number.parseInt(event.target.value, 10);
     if (Number.isNaN(nextValue)) {
       return;
     }
     setHistoryLimit(Math.max(1, Math.min(10000, nextValue)));
+  }
+
+  function renderAxes(minValue, maxValue, unitSuffix) {
+    const tickCount = 4;
+    const labels = [];
+
+    for (let tick = 0; tick <= tickCount; tick += 1) {
+      const ratio = tick / tickCount;
+      const y = height - padding - ratio * (height - padding * 2);
+      const value = minValue + ratio * (maxValue - minValue);
+      labels.push(
+        <g key={`tick-${unitSuffix}-${tick}`}>
+          <line x1={padding - 4} y1={y} x2={padding} y2={y} stroke="currentColor" opacity="0.55" />
+          <text x={padding - 8} y={y + 3} textAnchor="end" fontSize="10" fill="currentColor" opacity="0.75">
+            {value.toFixed(1)}{unitSuffix}
+          </text>
+        </g>
+      );
+    }
+
+    return (
+      <>
+        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="currentColor" opacity="0.45" />
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="currentColor" opacity="0.45" />
+        {labels}
+      </>
+    );
   }
 
   return (
@@ -33,12 +64,14 @@ export default function HistorySection({ historyState, chart, historyLimit, setH
           <Typography variant="subtitle2" className="history-chart-title">Temperature</Typography>
           <Box className="history-chart-wrap">
             <svg viewBox="0 0 700 240" role="img" aria-label="Temperature history chart">
+              {renderAxes(chart.tempMin, chart.tempMax, "°C")}
               <polyline points={chart.temperatureLine} fill="none" stroke="#cc2936" strokeWidth="2" />
             </svg>
           </Box>
           <Typography variant="subtitle2" className="history-chart-title">Humidity</Typography>
           <Box className="history-chart-wrap">
             <svg viewBox="0 0 700 240" role="img" aria-label="Humidity history chart">
+              {renderAxes(chart.humidityMin, chart.humidityMax, "%")}
               <polyline points={chart.humidityLine} fill="none" stroke="#1f77b4" strokeWidth="2" />
             </svg>
           </Box>
