@@ -30,9 +30,15 @@ export default function HistorySection({ historyState, chart, historyLimit, setH
       {!historyState.loading && !historyState.error && historyState.points.length > 0 && (
         <Paper className="history-paper">
           <Typography>Points: {historyState.points.length}</Typography>
+          <Typography variant="subtitle2" className="history-chart-title">Temperature</Typography>
           <Box className="history-chart-wrap">
-            <svg viewBox="0 0 700 240" role="img" aria-label="Temperature and humidity history chart">
+            <svg viewBox="0 0 700 240" role="img" aria-label="Temperature history chart">
               <polyline points={chart.temperatureLine} fill="none" stroke="#cc2936" strokeWidth="2" />
+            </svg>
+          </Box>
+          <Typography variant="subtitle2" className="history-chart-title">Humidity</Typography>
+          <Box className="history-chart-wrap">
+            <svg viewBox="0 0 700 240" role="img" aria-label="Humidity history chart">
               <polyline points={chart.humidityLine} fill="none" stroke="#1f77b4" strokeWidth="2" />
             </svg>
           </Box>

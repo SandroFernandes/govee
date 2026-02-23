@@ -5,7 +5,7 @@ export default function useHistoryData(limit) {
 
   useEffect(() => {
     let isMounted = true;
-    const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(10000, Math.floor(limit))) : 1000;
+    const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(10000, Math.floor(limit))) : 100;
 
     async function loadHistory() {
       try {

@@ -29,7 +29,7 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("history");
-  const [historyLimit, setHistoryLimit] = useState(1000);
+  const [historyLimit, setHistoryLimit] = useState(100);
   const [themeMode, setThemeMode] = useState("system");
   const [snack, setSnack] = useState({ open: false, message: "" });
 
