@@ -178,6 +178,41 @@ class HistoryApiEndpointTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["points"][0]["name"], "Bedroom")
 
+    def test_history_api_supports_bucket_resampling(self) -> None:
+        base = timezone.now().replace(minute=0, second=0, microsecond=0)
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:01",
+            name="H5075_A",
+            measured_at=base + timedelta(minutes=1),
+            temperature_c=20.0,
+            humidity_pct=40.0,
+        )
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:01",
+            name="H5075_A",
+            measured_at=base + timedelta(minutes=8),
+            temperature_c=22.0,
+            humidity_pct=44.0,
+        )
+        H5075HistoricalMeasurement.objects.create(
+            address="AA:BB:CC:DD:EE:01",
+            name="H5075_A",
+            measured_at=base + timedelta(minutes=12),
+            temperature_c=24.0,
+            humidity_pct=48.0,
+        )
+
+        response = self.client.get("/api/history/?address=AA:BB:CC:DD:EE:01&bucket_minutes=10")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 2)
+        self.assertEqual(payload["filters"]["bucket_minutes"], 10)
+        self.assertAlmostEqual(payload["points"][0]["temperature_c"], 21.0)
+        self.assertAlmostEqual(payload["points"][0]["humidity_pct"], 42.0)
+        self.assertAlmostEqual(payload["points"][1]["temperature_c"], 24.0)
+        self.assertAlmostEqual(payload["points"][1]["humidity_pct"], 48.0)
+
     def test_devices_api_lists_known_devices(self) -> None:
         H5075DeviceAlias.objects.create(address="aa:bb:cc:dd:ee:01", alias="Bedroom", detected_name="H5075_A")
 

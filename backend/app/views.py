@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 import json
 
 from django.contrib.auth import authenticate, login, logout
@@ -59,6 +59,7 @@ def history_values(request: HttpRequest) -> JsonResponse:
     address = (request.GET.get("address", "") or "").strip()
     hours_raw = (request.GET.get("hours", "") or "").strip()
     limit_raw = (request.GET.get("limit", "2000") or "2000").strip()
+    bucket_raw = (request.GET.get("bucket_minutes", "") or "").strip()
 
     try:
         limit = int(limit_raw)
@@ -69,6 +70,18 @@ def history_values(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"error": "Invalid 'limit'. Must be > 0."}, status=400)
 
     limit = min(limit, 10000)
+
+    bucket_minutes: int | None = None
+    if bucket_raw:
+        try:
+            bucket_minutes = int(bucket_raw)
+        except ValueError:
+            return JsonResponse({"error": "Invalid 'bucket_minutes'. Use an integer."}, status=400)
+
+        if bucket_minutes <= 0:
+            return JsonResponse({"error": "Invalid 'bucket_minutes'. Must be > 0."}, status=400)
+
+        bucket_minutes = min(bucket_minutes, 1440)
 
     hours: int | None = None
     if hours_raw:
@@ -91,19 +104,58 @@ def history_values(request: HttpRequest) -> JsonResponse:
 
     rows = list(queryset[:limit])
     rows.reverse()
-    address_keys = {(row.address or "").strip().lower() for row in rows if row.address}
-    alias_map = {item.address.lower(): item.display_name for item in H5075DeviceAlias.objects.filter(address__in=address_keys)}
+    if bucket_minutes is None:
+        address_keys = {(row.address or "").strip().lower() for row in rows if row.address}
+        alias_map = {item.address.lower(): item.display_name for item in H5075DeviceAlias.objects.filter(address__in=address_keys)}
+        points = [
+            {
+                "address": row.address,
+                "name": alias_map.get((row.address or "").strip().lower(), row.name),
+                "measured_at": row.measured_at.isoformat(),
+                "temperature_c": float(row.temperature_c),
+                "humidity_pct": float(row.humidity_pct),
+            }
+            for row in rows
+        ]
+    else:
+        bucket_seconds = bucket_minutes * 60
+        bucket_map: dict[tuple[str, int], dict[str, object]] = {}
 
-    points = [
-        {
-            "address": row.address,
-            "name": alias_map.get((row.address or "").strip().lower(), row.name),
-            "measured_at": row.measured_at.isoformat(),
-            "temperature_c": float(row.temperature_c),
-            "humidity_pct": float(row.humidity_pct),
-        }
-        for row in rows
-    ]
+        for row in rows:
+            normalized_address = (row.address or "").strip().lower()
+            measured_at_epoch = int(row.measured_at.timestamp())
+            bucket_epoch = measured_at_epoch - (measured_at_epoch % bucket_seconds)
+            key = (normalized_address, bucket_epoch)
+
+            current = bucket_map.get(key)
+            if current is None:
+                bucket_map[key] = {
+                    "address": row.address,
+                    "name": row.name,
+                    "bucket_epoch": bucket_epoch,
+                    "temperature_sum": float(row.temperature_c),
+                    "humidity_sum": float(row.humidity_pct),
+                    "count": 1,
+                }
+            else:
+                current["temperature_sum"] = float(current["temperature_sum"]) + float(row.temperature_c)
+                current["humidity_sum"] = float(current["humidity_sum"]) + float(row.humidity_pct)
+                current["count"] = int(current["count"]) + 1
+
+        bucketed_rows = sorted(bucket_map.values(), key=lambda item: (int(item["bucket_epoch"]), str(item["address"] or "").lower()))
+        address_keys = {(str(item["address"]) or "").strip().lower() for item in bucketed_rows if item["address"]}
+        alias_map = {item.address.lower(): item.display_name for item in H5075DeviceAlias.objects.filter(address__in=address_keys)}
+
+        points = [
+            {
+                "address": item["address"],
+                "name": alias_map.get((str(item["address"]) or "").strip().lower(), item["name"]),
+                "measured_at": datetime.fromtimestamp(int(item["bucket_epoch"]), tz=dt_timezone.utc).isoformat(),
+                "temperature_c": float(item["temperature_sum"]) / int(item["count"]),
+                "humidity_pct": float(item["humidity_sum"]) / int(item["count"]),
+            }
+            for item in bucketed_rows
+        ]
 
     return JsonResponse(
         {
@@ -112,6 +164,7 @@ def history_values(request: HttpRequest) -> JsonResponse:
                 "address": address or None,
                 "hours": hours,
                 "limit": limit,
+                "bucket_minutes": bucket_minutes,
             },
             "points": points,
         }

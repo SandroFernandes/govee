@@ -7,6 +7,13 @@ const INTERVAL_HOURS = {
   years: 24 * 365,
 };
 
+const INTERVAL_BUCKET_MINUTES = {
+  days: 5,
+  weeks: 30,
+  months: 120,
+  years: 720,
+};
+
 export default function useHistoryData(intervalUnit, address) {
   const [historyState, setHistoryState] = useState({ loading: true, error: "", points: [] });
 
@@ -14,10 +21,12 @@ export default function useHistoryData(intervalUnit, address) {
     let isMounted = true;
     const normalizedIntervalUnit = Object.prototype.hasOwnProperty.call(INTERVAL_HOURS, intervalUnit) ? intervalUnit : "days";
     const intervalHours = INTERVAL_HOURS[normalizedIntervalUnit];
+    const bucketMinutes = INTERVAL_BUCKET_MINUTES[normalizedIntervalUnit] || 5;
     const normalizedAddress = (address || "").trim();
 
     const baseParams = new URLSearchParams();
     baseParams.set("limit", "10000");
+    baseParams.set("bucket_minutes", String(bucketMinutes));
     if (normalizedAddress) {
       baseParams.set("address", normalizedAddress);
     }
