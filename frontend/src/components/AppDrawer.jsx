@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
+import { Box, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar } from "@mui/material";
 import "./AppDrawer.css";
 
 export default function AppDrawer({
@@ -15,7 +15,7 @@ export default function AppDrawer({
 
   const drawer = (
     <Box>
-      <Toolbar>{drawerOpen && <Typography variant="h6">Govee Dashboard</Typography>}</Toolbar>
+      <Toolbar />
       <Divider />
       <List>
         {menuItems.map((item) => {
