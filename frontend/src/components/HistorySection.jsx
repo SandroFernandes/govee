@@ -54,13 +54,18 @@ export default function HistorySection({
 
   const latestTimestampMs = chartData.length ? chartData[chartData.length - 1].measuredAtMs : null;
   let xDomain = ["dataMin", "dataMax"];
+  let dayWindowStartMs = null;
+  let dayWindowEndMs = null;
   if (historyInterval === "days" && Number.isFinite(latestTimestampMs)) {
+    const oneDayMs = 24 * 60 * 60 * 1000;
     const latestDate = new Date(latestTimestampMs);
     const dayStart = new Date(latestDate);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(latestDate);
     dayEnd.setHours(23, 59, 59, 999);
-    xDomain = [dayStart.getTime(), dayEnd.getTime()];
+    dayWindowStartMs = dayStart.getTime();
+    dayWindowEndMs = dayEnd.getTime();
+    xDomain = [dayWindowStartMs - oneDayMs, dayWindowEndMs + oneDayMs];
   }
 
   function handleIntervalChange(event) {
@@ -80,6 +85,11 @@ export default function HistorySection({
       return value;
     }
     if (historyInterval === "days") {
+      if (Number.isFinite(dayWindowStartMs) && Number.isFinite(dayWindowEndMs)) {
+        if (value < dayWindowStartMs || value > dayWindowEndMs) {
+          return date.toLocaleDateString([], { month: "short", day: "2-digit" });
+        }
+      }
       return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     }
     return date.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
