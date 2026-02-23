@@ -12,7 +12,7 @@ export default function useHistoryData(intervalUnit, address) {
 
   useEffect(() => {
     let isMounted = true;
-    const normalizedIntervalUnit = Object.prototype.hasOwnProperty.call(INTERVAL_HOURS, intervalUnit) ? intervalUnit : "weeks";
+    const normalizedIntervalUnit = Object.prototype.hasOwnProperty.call(INTERVAL_HOURS, intervalUnit) ? intervalUnit : "days";
     const intervalHours = INTERVAL_HOURS[normalizedIntervalUnit];
     const normalizedAddress = (address || "").trim();
 

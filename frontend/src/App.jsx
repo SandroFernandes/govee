@@ -28,7 +28,7 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("history");
-  const [historyInterval, setHistoryInterval] = useState("weeks");
+  const [historyInterval, setHistoryInterval] = useState("days");
   const [historyAddress, setHistoryAddress] = useState("");
   const [themeMode, setThemeMode] = useState("system");
   const [snack, setSnack] = useState({ open: false, message: "" });
