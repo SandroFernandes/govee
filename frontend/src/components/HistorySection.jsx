@@ -1,7 +1,6 @@
 import React from "react";
 import { Box, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import {
-  CartesianGrid,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -155,7 +154,6 @@ export default function HistorySection({
           <Box className="history-chart-wrap">
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 12 }}>
-                <CartesianGrid />
                 <XAxis
                   dataKey="measuredAtMs"
                   type="number"
@@ -174,7 +172,6 @@ export default function HistorySection({
           <Box className="history-chart-wrap">
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 12 }}>
-                <CartesianGrid />
                 <XAxis
                   dataKey="measuredAtMs"
                   type="number"
