@@ -20,35 +20,31 @@ export default function useHistoryData(intervalUnit) {
         let points = [];
 
         if (normalizedIntervalUnit === "days") {
-          const dayResponse = await fetch("/api/history/?hours=24&limit=10000");
-          if (!dayResponse.ok) {
-            throw new Error(`HTTP ${dayResponse.status}`);
+          const response = await fetch("/api/history/?limit=10000");
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
           }
 
-          const dayData = await dayResponse.json();
-          const dayPoints = Array.isArray(dayData.points) ? dayData.points : [];
+          const data = await response.json();
+          const allPoints = Array.isArray(data.points) ? data.points : [];
 
-          if (dayPoints.length > 0) {
-            points = dayPoints;
-          } else {
-            const fallbackResponse = await fetch("/api/history/?limit=10000");
-            if (!fallbackResponse.ok) {
-              throw new Error(`HTTP ${fallbackResponse.status}`);
-            }
+          if (allPoints.length > 0) {
+            const latestTimestampMs = Date.parse(allPoints[allPoints.length - 1].measured_at);
 
-            const fallbackData = await fallbackResponse.json();
-            const fallbackPoints = Array.isArray(fallbackData.points) ? fallbackData.points : [];
+            if (Number.isFinite(latestTimestampMs)) {
+              const latestDate = new Date(latestTimestampMs);
+              const dayStart = new Date(latestDate);
+              dayStart.setHours(0, 0, 0, 0);
+              const dayEnd = new Date(latestDate);
+              dayEnd.setHours(23, 59, 59, 999);
 
-            if (fallbackPoints.length > 0) {
-              const latestTimestampMs = Date.parse(fallbackPoints[fallbackPoints.length - 1].measured_at);
+              const dayStartMs = dayStart.getTime();
+              const dayEndMs = dayEnd.getTime();
 
-              if (Number.isFinite(latestTimestampMs)) {
-                const windowStartMs = latestTimestampMs - 24 * 60 * 60 * 1000;
-                points = fallbackPoints.filter((point) => {
-                  const pointTimestampMs = Date.parse(point.measured_at);
-                  return Number.isFinite(pointTimestampMs) && pointTimestampMs >= windowStartMs && pointTimestampMs <= latestTimestampMs;
-                });
-              }
+              points = allPoints.filter((point) => {
+                const pointTimestampMs = Date.parse(point.measured_at);
+                return Number.isFinite(pointTimestampMs) && pointTimestampMs >= dayStartMs && pointTimestampMs <= dayEndMs;
+              });
             }
           }
         } else {

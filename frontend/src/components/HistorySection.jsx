@@ -15,9 +15,10 @@ export default function HistorySection({ historyState, historyInterval, setHisto
   const chartData = historyState.points.map((point, index) => ({
     id: `${point.address || "device"}-${point.measured_at || index}`,
     measuredAt: point.measured_at || "",
+    measuredAtMs: Date.parse(point.measured_at || ""),
     temperature_c: Number(point.temperature_c),
     humidity_pct: Number(point.humidity_pct),
-  }));
+  })).filter((point) => Number.isFinite(point.measuredAtMs));
 
   const temperatures = chartData.map((point) => point.temperature_c);
   const humidities = chartData.map((point) => point.humidity_pct);
@@ -26,12 +27,23 @@ export default function HistorySection({ historyState, historyInterval, setHisto
   const humidityMin = humidities.length ? Math.min(...humidities) : 0;
   const humidityMax = humidities.length ? Math.max(...humidities) : 0;
 
+  const latestTimestampMs = chartData.length ? chartData[chartData.length - 1].measuredAtMs : null;
+  let xDomain = ["dataMin", "dataMax"];
+  if (historyInterval === "days" && Number.isFinite(latestTimestampMs)) {
+    const latestDate = new Date(latestTimestampMs);
+    const dayStart = new Date(latestDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(latestDate);
+    dayEnd.setHours(23, 59, 59, 999);
+    xDomain = [dayStart.getTime(), dayEnd.getTime()];
+  }
+
   function handleIntervalChange(event) {
     setHistoryInterval(event.target.value);
   }
 
   function formatTimestamp(value) {
-    if (!value) {
+    if (!Number.isFinite(value)) {
       return "";
     }
     const date = new Date(value);
@@ -70,7 +82,14 @@ export default function HistorySection({ historyState, historyInterval, setHisto
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="measuredAt" tickFormatter={formatTimestamp} minTickGap={36} />
+                <XAxis
+                  dataKey="measuredAtMs"
+                  type="number"
+                  scale="time"
+                  domain={xDomain}
+                  tickFormatter={formatTimestamp}
+                  minTickGap={36}
+                />
                 <YAxis unit="°C" domain={["auto", "auto"]} />
                 <Tooltip labelFormatter={formatTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}°C`, "Temperature"]} />
                 <Line type="monotone" dataKey="temperature_c" stroke="#cc2936" strokeWidth={2} dot={false} isAnimationActive={false} />
@@ -82,7 +101,14 @@ export default function HistorySection({ historyState, historyInterval, setHisto
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="measuredAt" tickFormatter={formatTimestamp} minTickGap={36} />
+                <XAxis
+                  dataKey="measuredAtMs"
+                  type="number"
+                  scale="time"
+                  domain={xDomain}
+                  tickFormatter={formatTimestamp}
+                  minTickGap={36}
+                />
                 <YAxis unit="%" domain={["auto", "auto"]} />
                 <Tooltip labelFormatter={formatTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}%`, "Humidity"]} />
                 <Line type="monotone" dataKey="humidity_pct" stroke="#1f77b4" strokeWidth={2} dot={false} isAnimationActive={false} />
