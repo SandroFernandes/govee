@@ -102,12 +102,20 @@ export default function HistorySection({
     if (Number.isNaN(date.getTime())) {
       return value;
     }
-    return date.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const dayPart = date.toLocaleDateString([], { month: "short", day: "2-digit" });
+    const timePart = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+    return `${dayPart} ${timePart}`;
   }
 
   function formatAxisValue(value) {
     return Number(value).toFixed(1);
   }
+
+  const tooltipStyle = {
+    fontSize: 12,
+    padding: "6px 8px",
+    lineHeight: 1.2,
+  };
 
   return (
     <Stack spacing={2}>
@@ -163,7 +171,13 @@ export default function HistorySection({
                   minTickGap={36}
                 />
                 <YAxis unit="°C" domain={temperatureDomain} width={72} tickFormatter={formatAxisValue} />
-                <Tooltip labelFormatter={formatTooltipTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}°C`, "Temperature"]} />
+                <Tooltip
+                  labelFormatter={formatTooltipTimestamp}
+                  formatter={(value) => [`${Number(value).toFixed(1)}°C`, "Temperature"]}
+                  contentStyle={tooltipStyle}
+                  itemStyle={tooltipStyle}
+                  labelStyle={tooltipStyle}
+                />
                 <Line type="monotone" dataKey="temperature_c" stroke="#cc2936" strokeWidth={2} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -181,7 +195,13 @@ export default function HistorySection({
                   minTickGap={36}
                 />
                 <YAxis unit="%" domain={humidityDomain} width={72} tickFormatter={formatAxisValue} />
-                <Tooltip labelFormatter={formatTooltipTimestamp} formatter={(value) => [`${Number(value).toFixed(1)}%`, "Humidity"]} />
+                <Tooltip
+                  labelFormatter={formatTooltipTimestamp}
+                  formatter={(value) => [`${Number(value).toFixed(1)}%`, "Humidity"]}
+                  contentStyle={tooltipStyle}
+                  itemStyle={tooltipStyle}
+                  labelStyle={tooltipStyle}
+                />
                 <Line type="monotone" dataKey="humidity_pct" stroke="#1f77b4" strokeWidth={2} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
